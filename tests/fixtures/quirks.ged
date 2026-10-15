@@ -1,0 +1,71 @@
+0 HEAD
+1 SOUR synthetic
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Robert "Bob" /WILKS/
+2 GIVN Robert "Bob"
+2 SURN WILKS
+1 SEX M
+1 BIRT
+2 DATE ABT. 1764
+2 PLAC Mapleford County, Virginia, USA
+1 BIRT
+2 DATE 1 JAN 1999
+1 DEAT
+2 DATE BET. 1622 - 1632
+2 PLAC Oakvale County, Virginia
+1 _CUSTOM ignored
+2 _SUB ignored too
+1 FAMC @F2@
+2 PEDI adopted
+1 FAMC @F1@
+2 PEDI birth
+1 MARR
+2 DATE 1 JAN 1800
+0 @I2@ INDI
+1 NAME Emily /MILLARD\MILLERS/
+1 SEX F
+1 DEAT Y
+0 @I3@ INDI
+1 NAME Daniel /McNally/
+2 NPFX Major
+2 NSFX , Jr.
+0 @I4@ INDI
+1 NAME Alan REED /Jr/
+0 @I5@ INDI
+1 NAME Evan DALE /{Capt}/
+0 @I6@ INDI
+1 NAME /FAIRWOOD/
+0 @I7@ INDI
+1 NAME Velma //
+0 @I8@ INDI
+1 NAME Jean
+0 @I9@ INDI
+1 NAME Ann /DEL
+2 CONC AWARE/
+1 BIRT
+2 PLAC Plainville
+0 @I10@ INDI
+1 NAME Zoë /Müller/
+1 BIRT
+2 DATE 12 MAR 1900
+2 PLAC First part
+3 CONC  second part
+3 CONT hidden second line
+0 @I11@ INDI
+1 NAME
+2 GIVN Only
+2 SURN Substructure
+0 @F1@ FAM
+1 HUSB @I1@
+1 MARR
+2 DATE 4 JUL 1790
+0 @F2@ FAM
+1 WIFE @I2@
+0 @F3@ FAM
+1 CHIL @I1@
+0 @SUB1@ SUBM
+1 NAME Someone
+0 TRLR

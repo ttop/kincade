@@ -1,0 +1,129 @@
+# Kincade config file. Save a copy as kincade.toml in the folder you run Kincade from,
+# or as ~/.config/kincade/config.toml, and every run reads it. --config PATH reads
+# another file instead, and --no-config reads none. `kincade --show-config` prints the
+# settings in use and where each one came from.
+#
+# Every key is a long option of the kincade command without its dashes, with
+# underscores (--no-page-numbers is no_page_numbers), except gedcom, which is the
+# FILE.ged of the command line. Each on/off option has one key, named like its flag:
+# true means what the flag means and false is the default, so no_index = true leaves
+# the index out. Precedence: the built-in defaults, then this file, then the command
+# line, so a value given on the command line replaces the one in this file. An on/off
+# flag has no opposite, so to run once without a key of this file, use --config with
+# another file or --no-config. footer together with no_footer = true is an error.
+#
+# --blank (one blank chart to fill in by hand) and --find (a list of the people who
+# match) are modes of one run and have no key. --blank reads no GEDCOM file, so gedcom
+# and root do not apply to it; paper, large_print, shadow, lang, title, footer,
+# no_footer and output do.
+#
+# A fan run ignores pedigree-only keys: root_family, no_empty, no_index, shadow, show_ids,
+# no_page_numbers, no_shorten_places and large_print. --find still lists people,
+# and --blank still makes a blank pedigree when fan = true.
+#
+# Paths: gedcom is relative to the folder this file is in, and ~ is your home folder.
+# The other paths (output, lang files) are relative to the folder you run Kincade from.
+#
+# Every key is optional. Below, gedcom and root show the form of a value, every other
+# key that is set holds its default, and a key that is commented out is not set:
+# remove the # to set it.
+
+# The GEDCOM file to read. A FILE.ged on the command line replaces it.
+gedcom = "family.ged"
+
+# The person at the head of chart 1: a record ID (I12, or @I12@ as GEDCOM writes it) or
+# part of a name. Needed unless the run is --find or --blank.
+root = "@I12@"
+
+# The initial pedigree root's spouse and marriage family: a record ID belonging to
+# the root as a partner (default: first FAMS). Does not choose ancestors or add the
+# spouse to the index. Ignored by fan and blank charts.
+# root_family = "F2"
+
+# true draws one landscape fan chart instead of the pedigree (default: false).
+fan = false
+
+# The number of generations, counting the root as 1: any positive number for the
+# pedigree (default: all), or 2 to 7 for the fan (default: 6). A value the current
+# mode does not take is ignored; its default applies. Zero is always an error.
+# generations = 7
+
+# true leaves out the boxes and lines of unknown ancestors (default: false).
+no_empty = false
+
+# true leaves out the name index pages at the end (default: false).
+no_index = false
+
+# true draws a soft drop shadow under every box (default: false).
+shadow = false
+
+# true replaces possibly living people's names with the language's Living label,
+# hides their details and printed record IDs, and omits them from the name index
+# (default: false).
+exclude_private = false
+
+# true shows only births and deaths in the boxes and the index (default: false, which
+# lets a christening or baptism stand in for a missing birth, and a burial or cremation
+# for a missing death). The privacy estimate reads all of them either way.
+no_event_standins = false
+
+# true prints each person's record ID (such as I12) in small type at the upper right of
+# their box, with its capital letters aligned at the top with the name's capitals,
+# and after their name in the index (default: false).
+show_ids = false
+
+# true leaves off the "Page n of N" numbers at the bottom left of every page (default:
+# false).
+no_page_numbers = false
+
+# Printed places have trimmed comma-separated parts, no empty parts, and a space
+# after each comma. A place too long for its box line is shortened first: the home
+# country goes, then middle parts, which are replaced by the ellipsis. Only then is
+# it cut with the ellipsis. true only cuts (default: false).
+no_shorten_places = false
+
+# true sets the box text in 14 pt and puts three generations on a page instead of four
+# (default: false). With it, generations = 3 is chart 1 alone (4 in normal print), and
+# each level of continuation charts adds two generations (three in normal print). The
+# number of charts changes too, by an amount that depends on the depth and shape of the
+# tree.
+large_print = false
+
+# Keep recorded surname case in both chart types and selection lists.
+preserve_case = false
+
+# Which parent family to draw for a person who belongs to more than one (an adoption, a
+# foster family). false (the default): the one with the most birth parents, then the
+# fewest step-parents, then the first in the file. true: the first with an adopted
+# parent, else the first with a foster parent, else as false. A step-parent is never
+# drawn. On the pedigree, a person whose drawn parents are adopted or foster gets
+# a note after their name, such as "(adopted)".
+adoptive_parents = false
+
+# The language of the PDF text: a name such as "de" (a file in kincade/lang/, else in
+# ~/.config/kincade/lang/) or the path of a .toml file (default: English).
+lang = "en"
+
+# The page size: "letter" or "a4" for the portrait pedigree; also "tabloid" or "a3"
+# for the landscape fan (default: "letter"). A size the mode does not take is ignored;
+# its default applies.
+paper = "letter"
+
+# The fan ink: "color", "grayscale" or "bw" (default: "color"). Ignored for the
+# pedigree and the blank chart. Grayscale uses gray fills; bw uses only outlines.
+ink = "color"
+
+# true leaves the footer off every page; the page numbers stay (default: false).
+# Cannot be combined with footer.
+# no_footer = true
+
+# The page title (default: the language's title).
+# title = "Family Pedigree"
+
+# The footer text (default: the language's footer, with the date). Cannot be combined
+# with no_footer = true.
+# footer = "Compiled by Jane Doe"
+
+# The PDF file to write (default: "<root name> cascading pedigree.pdf" in the folder you
+# run Kincade from; with fan = true: "<root name> fan chart.pdf").
+# output = "jane.pdf"

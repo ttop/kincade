@@ -1,0 +1,36 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  browser:
+    if: ${{ !github.event.repository.private }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/browser.yml
+  deploy:
+    needs: browser
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+      - run: uv run python web/build.py
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/site/
+      - id: deployment
+        uses: actions/deploy-pages@v5

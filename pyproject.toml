@@ -1,0 +1,103 @@
+[project]
+name = "kincade"
+version = "1.0"
+description = "Turn a GEDCOM file into cascading pedigree and fan chart PDFs."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Todd Wells" }]
+requires-python = ">=3.11"
+keywords = ["genealogy", "gedcom", "pedigree", "fan chart", "family tree", "ancestors", "pdf"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Sociology :: Genealogy",
+    "Typing :: Typed",
+]
+dependencies = ["reportlab>=4,<6"]
+
+[project.urls]
+Homepage = "https://github.com/ttop/kincade"
+Repository = "https://github.com/ttop/kincade"
+Issues = "https://github.com/ttop/kincade/issues"
+Changelog = "https://github.com/ttop/kincade/blob/main/CHANGELOG.md"
+
+[project.scripts]
+kincade = "kincade.cli:main"
+
+[dependency-groups]
+dev = ["mypy", "pytest", "ruff", "types-reportlab"]
+browser = ["playwright>=1.63,<2", "pypdf>=6,<7"]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""  # the package folder `kincade/` sits at the repository root, not under src/
+source-include = ["kincade.example.toml"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "B",     # bugbear
+    "BLE",   # blind except
+    "C4",    # comprehensions
+    "E",     # pycodestyle errors
+    "EXE",   # shebangs
+    "F",     # pyflakes
+    "FLY",   # static joins
+    "FURB",  # refurb
+    "I",     # import order
+    "PIE",   # misc. lints
+    "PLE",   # pylint errors
+    "PLW",   # pylint warnings
+    "RUF",   # ruff's own rules
+    "S102",  # exec
+    "S110",  # try-except-pass
+    "S112",  # try-except-continue
+    "SIM",   # simplify
+    "UP",    # pyupgrade
+    "W",     # pycodestyle warnings
+]
+ignore = [
+    "E501",    # ruff format wraps code; comments are wrapped by hand
+    "E731",    # tests name one-line lambdas
+    "RUF001",  # en dashes, dotless i and other non-ASCII characters are intended
+    "RUF002",  # (the same, in docstrings)
+    "RUF003",  # (the same, in comments)
+    "RUF005",  # a + [b] reads as well as [*a, b]
+    "SIM300",  # takes a module constant under test for the expected value
+]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["conftest", "kincade_web", "pdfread"]  # local helpers
+
+[tool.mypy]
+python_version = "3.11"
+files = ["kincade", "web/kincade_web.py", "web/build.py"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+strict_equality = true
+extra_checks = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+no_implicit_reexport = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool", "possibly-undefined"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "web"]  # the package and browser glue
+markers = [
+    "system_fonts: fonts='auto' looks for TrueType fonts, as outside the tests",
+]

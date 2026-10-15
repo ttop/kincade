@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Kincade — Family charts</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f5f6f8; --panel: #fff; --text: #202733; --muted: #526071; --border: #bec7d1; --accent: #215da6; --selected: #e5effc; --error: #a42020; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #161b22; --panel: #212833; --text: #edf1f7; --muted: #b0bdce; --border: #5a6778; --accent: #9fc8ff; --selected: #2a4160; --error: #ffb2b2; }
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; padding: 1rem; background: var(--bg); color: var(--text); font: 1rem/1.5 system-ui, sans-serif; }
+    main { max-width: 86rem; margin: 0 auto; }
+    h1 { margin: 0; font-size: 2rem; } h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
+    p { margin: .5rem 0; } header { margin-bottom: .5rem; }
+    .title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .85rem; }
+    .header-metadata { display: flex; align-items: baseline; gap: .75rem; margin-left: auto; color: var(--muted); font-size: .85rem; white-space: nowrap; }
+    .title-row p { margin: 0; } header > p { margin: .15rem 0 0; font-size: .85rem; }
+    .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; }
+    .section-heading h2 { margin: 0; } #sample { padding: .2rem .4rem; font-size: .8rem; }
+    section { margin: 0; padding: .75rem; border: 1px solid var(--border); border-radius: .6rem; background: var(--panel); }
+    a { color: var(--accent); } .muted { color: var(--muted); }
+    button, input, select { font: inherit; }
+    button, .action { padding: .45rem .8rem; border: 1px solid var(--border); border-radius: .35rem; background: var(--panel); color: var(--text); cursor: pointer; }
+    button:disabled { cursor: default; opacity: .6; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-width: 0; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: .3rem; background: var(--panel); color: var(--text); }
+    input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
+    input[aria-invalid=true] { border-color: var(--error); }
+    label { display: block; } .field > label { margin-bottom: .25rem; }
+    .field { min-width: 0; } .check { display: flex; align-items: start; gap: .5rem; }
+    .check input { flex-shrink: 0; margin-top: .4rem; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .75rem; margin: .65rem 0; }
+    .option-fields { grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); }
+    fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+    legend { margin-bottom: .35rem; font-weight: 600; }
+    .segments { display: inline-flex; flex-wrap: wrap; gap: .25rem; }
+    .segments label { position: relative; padding: .45rem .8rem; border: 1px solid var(--border); border-radius: .35rem; cursor: pointer; }
+    .segments label:has(input:checked) { background: var(--selected); border-color: var(--accent); }
+    .segments label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .drop-zone { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; padding: .5rem; border: 2px dashed var(--border); border-radius: .5rem; cursor: pointer; overflow-wrap: anywhere; }
+    .drop-zone.dragging { border-color: var(--accent); background: var(--selected); }
+    #choose-file { padding: .3rem .5rem; font-size: .85rem; }
+    #file-summary { font-size: .85rem; }
+    .root-picker { position: relative; z-index: 2; }
+    #search { padding-right: 2.75rem; }
+    #root-action { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 2.5rem; padding: .25rem; border: 0; border-radius: .25rem; display: grid; place-items: center; }
+    #search:focus-visible { outline: none; }
+    .root-picker:focus-within #search { border-color: var(--accent); }
+    .root-picker:has(:focus-visible) #search { box-shadow: 0 0 0 1px var(--accent); }
+    #root-action:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+    #root-action:hover:not(:disabled) { background: var(--selected); }
+    #root-action svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 2; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+    #search[aria-expanded=true] { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    #root-choices { position: absolute; top: calc(100% - 1px); left: 0; width: 100%; border: 1px solid var(--border); border-radius: 0 0 .3rem .3rem; background: var(--panel); box-shadow: 0 .3rem .6rem #0002; }
+    .root-picker:focus-within #root-choices { border-color: var(--accent); }
+    .root-picker:has(:focus-visible) #root-choices { box-shadow: 0 1px 0 1px var(--accent), 0 .3rem .6rem #0002; }
+    #result-summary { margin: 0; padding: .25rem .5rem; font-size: .8rem; border-bottom: 1px solid var(--border); }
+    .results { list-style: none; margin: 0; padding: 0; max-height: 15rem; overflow: auto; overscroll-behavior: contain; }
+    .results button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 .5rem; width: 100%; padding: .35rem .5rem; text-align: left; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; overflow-wrap: anywhere; }
+    .results li:last-child button { border-bottom: 0; }
+    .results button[aria-selected=true] { background: var(--selected); box-shadow: inset 3px 0 var(--accent); }
+    .person-name { grid-column: 1 / -1; font-weight: 600; }
+    .record-id, .years { color: var(--muted); font-size: .8rem; }
+    summary { cursor: pointer; } details { margin-top: .5rem; }
+    .error { color: var(--error); overflow-wrap: anywhere; } pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+    .pdf-details { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; margin-bottom: .5rem; }
+    #pdf-summary { margin: 0; font-size: .9rem; }
+    .pdf-details .action { font-size: .85rem; padding: .3rem .5rem; }
+    .preview { position: relative; } iframe { display: block; width: 100%; border: 1px solid var(--border); border-radius: .35rem; }
+    .rendering { position: absolute; top: .75rem; left: .75rem; margin: 0; padding: .4rem .8rem; border-radius: .3rem; background: var(--panel); border: 1px solid var(--border); }
+    #root-family-field { margin-top: .65rem; }
+    #root-prompt { margin: .5rem 0 0; font-size: .85rem; }
+    .workspace, .controls-rail { display: grid; gap: .75rem; min-width: 0; }
+    .workspace { margin-top: .75rem; align-items: start; }
+    .controls-rail { font-size: .9rem; }
+    .chart-area { min-width: 0; }
+    .paper-label { display: flex; align-items: baseline; justify-content: space-between; gap: .25rem; }
+    .orientation { color: var(--muted); font-size: .75rem; }
+    .option-fields .field:has(.check), .option-fields .field:has(#ink) { grid-column: 1 / -1; }
+    #more-options > summary { width: fit-content; border-radius: .2rem; }
+    #more-options > summary:focus-visible { outline-width: 2px; outline-offset: 2px; }
+    #more-options .field:has(.check), #more-options .field:has(input[type=text]), #custom-generations-field { grid-column: 1 / -1; }
+    @media (min-width: 48rem) { .workspace { grid-template-columns: 19rem minmax(0, 1fr); } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="title-row"><h1>Kincade</h1><p>Make a cascading pedigree or fan chart PDF from a GEDCOM file</p><div class="header-metadata"><span id="version">Version</span><a href="https://github.com/ttop/kincade">GitHub</a></div></div>
+    <p class="muted">Your GEDCOM file is read in this browser and never uploaded.</p>
+  </header>
+  <div role="status" aria-live="polite"><span id="status">Loading Kincade… First visit downloads about 11 MB once.</span></div>
+  <button id="retry" type="button" hidden>Retry</button>
+  <div class="workspace">
+  <div class="controls-rail">
+  <section aria-labelledby="tree-heading">
+    <div class="section-heading"><h2 id="tree-heading">Family tree</h2><button id="sample" type="button">See an example</button></div>
+    <div id="drop-zone" class="drop-zone">
+      <button id="choose-file" type="button" aria-describedby="file-summary">Choose file</button>
+      <span id="file-summary">Choose or drop a GEDCOM file (5.5, 5.5.1, or 7.0)</span>
+      <input id="file" type="file" accept=".ged,.gedcom" aria-label="Choose GEDCOM file" hidden>
+    </div>
+    <div id="open-error" class="error" role="alert" hidden></div>
+  </section>
+  <section aria-labelledby="root-heading">
+    <h2 id="root-heading">Root person</h2>
+    <fieldset id="root-controls" disabled>
+      <label for="search">Search by name or record ID</label>
+      <div class="root-picker">
+        <input id="search" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="results" aria-expanded="false" aria-describedby="root-summary">
+        <button id="root-action" type="button" aria-label="Open person list">
+          <svg id="root-list-icon" data-icon="list" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg>
+          <svg id="root-clear-icon" data-icon="clear" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="m4 4 8 8m0-8-8 8"/></svg>
+        </button>
+        <div id="root-choices" hidden>
+          <p id="result-summary" class="muted" role="status"></p>
+          <ul id="results" class="results" role="listbox" aria-label="Matching people"></ul>
+        </div>
+      </div>
+      <p id="root-summary" class="visually-hidden" aria-live="polite">Choose a root person.</p>
+      <p id="root-prompt" class="error" role="status" hidden>Choose a root person to see the chart.</p>
+    </fieldset>
+    <div id="root-family-field" class="field" hidden><label for="root-family">Root marriage</label><select id="root-family" data-option="root_family" data-charts="pedigree" disabled><option value="" selected>First recorded marriage</option></select></div>
+  </section>
+  <section aria-labelledby="options-heading">
+    <h2 id="options-heading">Options</h2>
+    <fieldset id="option-controls" disabled>
+      <fieldset>
+        <legend>Chart</legend>
+        <div class="segments">
+          <label for="chart-pedigree"><input id="chart-pedigree" type="radio" name="chart" value="pedigree" checked> Pedigree</label>
+          <label for="chart-fan"><input id="chart-fan" type="radio" name="chart" value="fan"> Fan</label>
+        </div>
+      </fieldset>
+      <div class="fields option-fields">
+        <div class="field" data-charts="pedigree"><label for="pedigree-generation-choice">Generations</label><select id="pedigree-generation-choice"><option value="all" selected>All generations</option><option value="custom">Custom…</option></select></div>
+        <div class="field" data-charts="fan" hidden><label for="fan-generations">Generations</label><select id="fan-generations" data-option="generations" data-charts="fan"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option></select></div>
+        <div class="field" data-charts="pedigree"><label class="paper-label" for="pedigree-paper">Paper <span class="orientation">Portrait</span></label><select id="pedigree-paper" data-option="paper" data-charts="pedigree"><option value="letter" selected>Letter</option><option value="a4">A4</option></select></div>
+        <div class="field" data-charts="fan" hidden><label class="paper-label" for="fan-paper">Paper <span class="orientation">Landscape</span></label><select id="fan-paper" data-option="paper" data-charts="fan"><option value="letter" selected>Letter</option><option value="a4">A4</option><option value="tabloid">Tabloid</option><option value="a3">A3</option></select></div>
+        <div class="field" data-charts="pedigree"><label class="check" for="large-print"><input id="large-print" type="checkbox" data-option="large_print" data-charts="pedigree"> Large print</label></div>
+        <div class="field" data-charts="fan" hidden><label for="ink">Ink</label><select id="ink" data-option="ink" data-charts="fan"><option value="color" selected>Color</option><option value="grayscale">Grayscale</option><option value="bw">Black and white</option></select></div>
+        <div class="field" data-charts="pedigree fan"><label class="check" for="exclude-private"><input id="exclude-private" type="checkbox" data-option="exclude_private" data-charts="pedigree fan"> Hide living people</label></div>
+      </div>
+      <details id="more-options">
+        <summary>More options</summary>
+        <div class="fields">
+          <div id="custom-generations-field" class="field" data-charts="pedigree" hidden><label for="pedigree-generations">Custom generations</label><input id="pedigree-generations" type="number" min="1" step="1" placeholder="all" data-option="generations" data-charts="pedigree" aria-describedby="generations-help generations-error"><p id="generations-help" class="muted">Leave empty for all generations.</p><p id="generations-error" class="error" hidden>Enter a whole number of at least 1, or leave empty for all generations.</p></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="empty-boxes"><input id="empty-boxes" type="checkbox" data-option="empty_boxes" data-charts="pedigree"> Leave out unknown ancestors</label></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="preserve-case"><input id="preserve-case" type="checkbox" checked data-option="preserve_case" data-charts="pedigree fan"> Last name UPPERCASE</label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="show-ids"><input id="show-ids" type="checkbox" data-option="show_ids" data-charts="pedigree"> Show record IDs</label></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="adoptive-parents"><input id="adoptive-parents" type="checkbox" data-option="adoptive_parents" data-charts="pedigree fan"> Draw adoptive and foster parents</label></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="event-standins"><input id="event-standins" type="checkbox" checked data-option="event_standins" data-charts="pedigree fan"> Christenings and burials stand in for missing births and deaths</label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="shorten-places"><input id="shorten-places" type="checkbox" checked data-option="shorten_places" data-charts="pedigree"> Shorten long places</label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="shadow"><input id="shadow" type="checkbox" data-option="shadow" data-charts="pedigree"> Drop shadow</label></div>
+          <div class="field" data-charts="pedigree"><label for="pedigree-title">Title</label><input id="pedigree-title" type="text" placeholder="Cascading Pedigree — Root's name" data-option="title" data-charts="pedigree"></div>
+          <div class="field" data-charts="fan" hidden><label for="fan-title">Title</label><input id="fan-title" type="text" placeholder="Root's name — Fan chart" data-option="title" data-charts="fan"></div>
+          <div class="field" data-charts="pedigree fan"><label for="footer">Footer</label><input id="footer" type="text" placeholder="Created &lt;today's date&gt; using Kincade" data-option="footer" data-charts="pedigree fan"></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="no-footer"><input id="no-footer" type="checkbox" data-option="footer" data-charts="pedigree fan"> No footer</label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="page-numbers"><input id="page-numbers" type="checkbox" checked data-option="page_numbers" data-charts="pedigree"> Page numbers</label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="index"><input id="index" type="checkbox" checked data-option="index" data-charts="pedigree"> Name index</label></div>
+        </div>
+      </details>
+    </fieldset>
+  </section>
+  </div>
+  <div class="chart-area">
+  <div id="request-error" class="error" role="alert" hidden></div>
+  <section id="pdf-section" aria-labelledby="pdf-heading" hidden>
+    <h2 id="pdf-heading" class="visually-hidden">PDF</h2>
+    <div class="pdf-details"><p id="pdf-summary" role="status"></p><a id="download-pdf" class="action">Download PDF</a><a id="open-pdf" class="action" target="_blank" rel="noopener">Open PDF</a></div>
+    <div id="preview" class="preview" hidden><iframe id="pdf-frame" title="Family chart PDF preview"></iframe><p id="rendering-overlay" class="rendering" hidden>Rendering…</p></div>
+  </section>
+  <p id="render-status" role="status" hidden>Rendering…</p>
+  </div>
+  </div>
+</main>
+<script id="manifest" type="application/json"></script>
+<script id="glue" type="text/x-python"></script>
+<script id="worker" type="text/js-worker"></script>
+<script id="app"></script>
+</body>
+</html>

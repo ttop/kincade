@@ -1,0 +1,166 @@
+# Kincade language file: German (uv run kincade FILE.ged --root ... --lang de).
+#
+# Every text key of lang/en.toml is translated here. Keep placeholder names exactly:
+# {n}, {pos}, {chart}, {date}, {day}, {month}, {year}, {birth}, {death}, {years},
+# {title}, {name}, {page}, {pages}, {id}, {y}. Only templated keys allow braces; write a
+# literal brace doubled ({{ or }}). Box labels share a line with their values, so
+# keep them short.
+#
+# Wording follows German genealogical usage: "Ahnentafel" for a pedigree chart, "Tafel"
+# for each sheet, "ist identisch mit" for a cross-reference, geb./verh./gest. for
+# born/married/died, "um" for approximate dates, "err." (errechnet) for calculated ones,
+# Duden month abbreviations, and * / † for years in the index.
+
+# Base pedigree title. --title overrides the printed heading.
+title = "Ahnentafel"
+
+# Name for a living person when --exclude-private is enabled.
+living_name = "Lebend"
+
+# Fan page title: Fächerahnentafel names the fan-shaped ancestor chart.
+# {name} is the center person's name.
+fan_title = "{name} — Fächerahnentafel"
+
+# Default pedigree heading and PDF Title metadata.
+meta_title = "{title} — {name}"
+
+# Footer on every page.
+footer = "Erstellt am {date} mit Kincade"
+
+# Footer of the blank chart (--blank): no date.
+footer_blank = "Erstellt mit Kincade"
+
+# Full date for the footer and for GEDCOM dates with a day: day first, a period after
+# the day ("3. März 1903").
+date_format = "{day}. {month} {year}"
+
+# Chart label, top right.
+chart_label = "Tafel {n}"
+
+# Line under the header of a continuation chart.
+continuation = "Nr. 1 auf dieser Tafel ist identisch mit Nr. {pos} auf Tafel {chart}."
+
+# Line under the header of Tafel 1 when it has continuation charts. An empty string
+# leaves it off.
+chart_note = "Fortsetzung auf der Tafel mit der Nummer in der letzten Spalte."
+
+# Marks text that is cut short to fit its space. One to three characters.
+ellipsis = "…"
+
+# Bottom-left page number: {page} of {pages}, counting charts and index pages.
+page_number = "Seite {page} von {pages}"
+
+# The record ID printed with --show-ids, at the upper right of a box and after the
+# name in the index. {id} is the person's record ID without the @ signs. Small black
+# type, so keep it short.
+record_id = "[{id}]"
+
+[months]
+# January first. Duden abbreviations (Febr., Sept.): März, Mai, Juni and Juli are
+# written out; the rest take a period.
+short = ["Jan.", "Febr.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez."]
+
+[index]
+# Title of the name index pages.
+title = "Namensregister"
+
+# One line under the title of the first index page: how to read the numbers after each
+# name (chart-box: 6-1 is box 1 on chart 6). An empty string leaves it off.
+legend = "Die Zahlen nach jedem Namen bedeuten Tafel-Nr.: 6-1 ist Nr. 1 auf Tafel 6."
+
+# Birth-year piece of an index entry: * = geboren.
+born = "* {birth}"
+
+# Death-year piece of an index entry: † = gestorben.
+died = "† {death}"
+
+# Between the birth and death pieces.
+joiner = ", "
+
+# Wraps both pieces in an index entry: (* 1850, † 1920).
+years = "({years})"
+
+# The birth-year piece when the year is a christening or baptism: ~ = getauft, as in "~
+# 1750".
+christened = "~ {birth}"
+
+# The death-year piece when the year is a burial (begr.) or a cremation (eingeäsch.).
+buried = "begr. {death}"
+cremated = "eingeäsch. {death}"
+
+[relationship]
+# Relationship note from Tree.parent_relationship, in either parents mode.
+# Uses available non-step parents, or the link's non-step relationships when
+# neither parent is available. Birth and other relationships give no note.
+adopted = "(adoptiert)"
+foster = "(Pflegekind)"
+
+[labels]
+# Partner paired with the initial pedigree root's marriage.
+spouse = "Partner:"
+# Box labels, before each value: geboren, verheiratet, gestorben; each place line reads
+# "in …".
+birth = "geb."
+birth_place = "in"
+marriage = "verh."
+marriage_place = "in"
+death = "gest."
+death_place = "in"
+
+# Stand-ins for a missing birth or death: getauft (christening or baptism), begraben
+# (burial), eingeäschert (cremation, shortened: "eingeäsch." is the long form cut to fit
+# the box).
+christening = "get."
+christening_place = "in"
+burial = "begr."
+burial_place = "in"
+cremation = "eingeäsch."
+cremation_place = "in"
+
+[dates]
+# ABT → um (the usual genealogical form), EST → geschätzt (kept apart from ABT; "gesch."
+# would read as geschieden), CAL → err. (errechnet).
+about = "um"
+estimated = "geschätzt"
+calculated = "err."
+before = "vor"
+after = "nach"
+# A FROM date with no TO, and a TO date with no FROM.
+from = "ab"
+to = "bis"
+# Between the two dates of a range: 1622–1632.
+range = "–"
+
+[years]
+# Fan stand-ins use the box labels: getauft, begraben and eingeäschert.
+# {y} is the year with any short date word.
+christening = "get. {y}"
+burial = "begr. {y}"
+cremation = "eingeäsch. {y}"
+
+# Verstorben states a death without a readable year. No placeholders.
+deceased = "verstorben"
+
+# Short fan year words: um (approximate, estimated or calculated), vor (before or
+# TO), nach (after or FROM), zw. (zwischen, before a range's first year).
+# {y} is the year, including both readings of a double year.
+about = "um {y}"
+before = "vor {y}"
+after = "nach {y}"
+between = "zw. {y}"
+
+[sort]
+# The index order of German name registers, DIN 5007-2 "Namensliste". The printed names
+# do not change. ä, ö and ü sort as ae, oe and ue, so Müller and Mueller sort together,
+# then Muller, then Mutz. ß sorts as ss, which the casefolding already does. Name
+# particles are skipped when a surname is sorted, so "van Gogh" files under G and "von
+# der Heide" under H; the printed name stays as written. Punctuation is dropped from the
+# sort key first (O'Brien files as obrien).
+after_z = []
+ignore_particles = ["von", "zu", "vom", "zum", "van", "de", "der", "den", "dem"]
+mc_as_mac = false
+
+[sort.expand]
+"ä" = "ae"
+"ö" = "oe"
+"ü" = "ue"

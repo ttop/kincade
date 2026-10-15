@@ -1,0 +1,222 @@
+# Kincade language file: English, the built-in wording.
+#
+# This file is the template: it holds exactly the strings Kincade uses when no language
+# is given. To make another language, copy it to ~/.config/kincade/lang/<name>.toml,
+# translate the values, and run:
+# uv run kincade FILE.ged --root ... --lang <name>
+# A name Kincade ships a file for (en, de) finds that bundled file first. A --lang value
+# that ends in .toml or contains a path separator is used as a path, so a copy kept
+# anywhere works too: --lang path/to/<name>.toml
+#
+# Values are double-quoted TOML strings. A key you leave out keeps its English value,
+# and a key the program does not know is ignored with a warning. Text in {braces} is a
+# placeholder the program fills in: keep its name exactly.
+# Only plain {name} fields are allowed (no format specs such as {n:02d}, conversions or
+# attribute access), and a literal brace is written doubled: {{ or }}.
+# Only the templates named below take placeholders; the other texts must not contain
+# braces.
+
+# The base pedigree title. --title overrides the printed heading.
+title = "Cascading Pedigree"
+
+# The name shown for a living person when --exclude-private is enabled.
+living_name = "Living"
+
+# The fan page's title. {name} is the center person's name. --title overrides it.
+fan_title = "{name} — Fan chart"
+
+# The default pedigree heading and PDF Title metadata. {title} is the base title;
+# {name} is the root's name.
+meta_title = "{title} — {name}"
+
+# The footer on every page. {date} is the date formatted by date_format. --footer
+# overrides it.
+footer = "Created {date} using Kincade"
+
+# The footer of the blank chart (--blank). That page has no date, so this has no
+# placeholder. --footer overrides it.
+footer_blank = "Created using Kincade"
+
+# A full date (day, month, year), for the footer and for GEDCOM dates with a day. {day}
+# and {year} are numbers as text; {month} is from months.short.
+date_format = "{day} {month} {year}"
+
+# The chart label at the top right. {n} is the chart number.
+chart_label = "Chart {n}"
+
+# The line under the header of a continuation chart. {pos} is the box on the chart it
+# continues from, {chart} that chart's number.
+continuation = "Number 1 on this chart is the same as number {pos} on chart {chart}."
+
+# The line under the header of chart 1 when it has continuation charts: where its
+# ancestry goes on. It sits where the
+# continuation line sits. An empty string leaves it off.
+chart_note = "Ancestry continues on the chart numbered in the last column."
+
+# Marks text that is cut short to fit its space. One to three characters.
+ellipsis = "…"
+
+# The page number at the bottom left of every page, on the footer's line. {page} is the
+# page's number, counted from 1, and {pages} the number of pages in the PDF (charts and
+# index pages alike).
+page_number = "Page {page} of {pages}"
+
+# The record ID printed with --show-ids, at the upper right of a box and after the
+# name in the index. {id} is the person's record ID without the @ signs. Small black
+# type, so keep it short.
+record_id = "[{id}]"
+
+[months]
+# Twelve short month names, January first. Used for GEDCOM dates and the footer date.
+short = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+[index]
+# The title of the name index pages.
+title = "Index"
+
+# One line under the title of the first index page, in the small type of the
+# continuation line: how to read the numbers after each name. An empty string leaves it
+# off.
+legend = "The numbers after each name indicate the chart number and box number. 6-1 is box 1 on chart 6."
+
+# The birth-year piece of an index entry. {birth} is the year.
+born = "b. {birth}"
+
+# The death-year piece of an index entry. {death} is the year.
+died = "d. {death}"
+
+# Between the birth and death pieces.
+joiner = " – "
+
+# Wraps the pieces in an index entry. {years} is the pieces joined by joiner.
+years = "({years})"
+
+# The birth-year piece when the year is a christening or baptism (the birth stand-in).
+# {birth} is the year.
+christened = "chr. {birth}"
+
+# The death-year piece when the year is a burial, or a cremation. {death} is the year.
+buried = "bur. {death}"
+cremated = "crem. {death}"
+
+[relationship]
+# Relationship note from Tree.parent_relationship, in either parents mode.
+# Uses available non-step parents, or the link's non-step relationships when
+# neither parent is available. Adopted takes precedence over foster. Birth and other
+# relationships give no note.
+adopted = "(adopted)"
+foster = "(foster)"
+
+[labels]
+# Partner paired with the initial pedigree root's marriage.
+spouse = "spouse:"
+# Box label for the birth date.
+birth = "b."
+
+# Box label for the birth place.
+birth_place = "bp."
+
+# Box label for the marriage date (the root and fathers only).
+marriage = "m."
+
+# Box label for the marriage place (the root and fathers only).
+marriage_place = "mp."
+
+# Box label for the death date.
+death = "d."
+
+# Box label for the death place.
+death_place = "dp."
+
+# A christening or baptism standing in for the birth, when the birth has no date or
+# place (the labels Xp. are for the place, as above). A burial or a cremation standing
+# in for the death, when the death has neither.
+christening = "chr."
+christening_place = "chrp."
+burial = "bur."
+burial_place = "burp."
+cremation = "crem."
+cremation_place = "cremp."
+
+[dates]
+# GEDCOM ABT, ABOUT, CA, CIRCA and ~ (approximately).
+about = "abt"
+
+# GEDCOM EST (estimated).
+estimated = "est"
+
+# GEDCOM CAL (calculated).
+calculated = "cal"
+
+# GEDCOM BEF and BEFORE.
+before = "bef"
+
+# GEDCOM AFT and AFTER.
+after = "aft"
+
+# A FROM date with no TO. The word goes before the date.
+from = "from"
+
+# A TO date with no FROM. The word goes before the date.
+to = "to"
+
+# Between the two dates of a range (BET a AND b, FROM a TO b).
+range = "-"
+
+[years]
+# The fan's stand-in year pieces. {y} is the year, including any date word.
+christening = "chr {y}"
+burial = "bur {y}"
+cremation = "crem {y}"
+
+# A death record or filled death stand-in with no readable year. No placeholders.
+deceased = "Deceased"
+
+# The fan's short year words. {y} is the year (both readings of a double year).
+# Estimated and calculated years use about; TO uses before; FROM uses after.
+# A range uses between and its first year.
+about = "abt {y}"
+before = "bef {y}"
+after = "aft {y}"
+between = "bet {y}"
+
+[sort]
+# How the name index is ordered. These settings change only the order of the entries,
+# never the text printed: surnames print in capitals (VON DER HEIDE) by default,
+# while preserve_case keeps their recorded case. The English defaults sort
+# alphabetically: surname, then given name, birth year and suffix. Before any of these
+# settings apply, punctuation is dropped from the sort key (letters, digits and spaces
+# only), so O'Brien files as obrien. The README section "Index sort order" explains
+# each setting and the order of the steps.
+
+# Letters that sort after "z", in the order listed. A letter here is not folded to its
+# base letter (so å does not file under a). Each item is one letter. Examples: Swedish
+# and Finnish ["å", "ä", "ö"]; Danish and Norwegian ["æ", "ø", "å"]. Swedish then files
+# Åberg after Zetterberg, and Ä and Ö in that order.
+after_z = []
+
+# Surname particles that are skipped at the start of a surname when the index is sorted.
+# Each is a whole word, matched without regard to case, and several in a row are all
+# skipped: with ["von", "der"], "von der Heide" files under H.
+# A surname that is only a particle ("Van") is never stripped, and a given name is never
+# affected. The printed name keeps its particle. German (DIN 5007-2) uses ["von", "zu",
+# "vom", "zum", "van", "de", "der", "den", "dem"], so van Gogh files under G, between
+# Goethe and Gogol. Dutch lists often skip van, de, der, den, ten, ter, te and het.
+ignore_particles = []
+
+# true sorts a surname that begins with "Mc" as if it began with "Mac", the English
+# convention: McClure then files with MacClure, not after MacDonald. false sorts the
+# letters as written and is the English default.
+mc_as_mac = false
+
+# Replacements for the sort key only. Each key is non-empty text, in any case;
+# it sorts as its value.
+# They are applied to the lower-cased name before accents are folded, in one pass,
+# longest key first, so a value is never replaced again. A value may be empty, which
+# drops the key's letters from the sort key.
+# German (DIN 5007-2): ä, ö and ü sort as ae, oe and ue, so Müller sorts with Mueller. ß
+# already sorts as ss.
+# Spanish: ñ = "n~" files ñ after n, because "~" sorts after every letter: the ñ words
+# come after all the n words and before the o words. Dutch: some lists file ij as y (ij
+# = "y"); check the list you follow.
+[sort.expand]

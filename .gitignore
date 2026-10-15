@@ -1,0 +1,27 @@
+# Python, tool and build output
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+/out/
+.DS_Store
+.claude/launch.json
+
+# Local reference data and worktrees
+/reference/
+.worktrees/
+.claude/worktrees/
+
+# Charts a run writes; docs/examples keeps the sample charts
+*.pdf
+!docs/examples/*.pdf
+
+# Personal config files and family trees; tracked examples are exempt
+kincade.toml
+*.ged
+*.gedcom
+!tests/fixtures/*.ged
+!tests/fixtures/*.gedcom
+!docs/examples/george-washington.ged

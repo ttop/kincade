@@ -97,6 +97,13 @@ The suite checks these behaviors with synthetic GEDCOM trees:
   through restoration or reload, and clean reload.
 - One unavailable font and a bad font hash use all-or-nothing base-14 fallback;
   a mismatched wheel fails at this site, Retry reloads, and a clean site recovers.
+- First visits in fresh browser contexts at the site root and mounted directories,
+  including no trailing slash, a trailing slash, explicit `index.html`, and page
+  query strings/fragments. The test host rewrites these URLs without redirecting
+  and returns 403 for missing objects. Each case checks the wheel's directory,
+  hash query parameter and SHA-256, then downloads both sample charts. A missing
+  wheel reports its URL and HTTP status with a recovery hint, without overflowing
+  a narrow screen.
 - A real CSP response header, and plain HTTP on a mapped non-loopback hostname
   with `isSecureContext === false`, using initialization, both charts and downloads.
 

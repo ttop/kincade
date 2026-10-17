@@ -15,7 +15,7 @@ function status(text, source) {
 async function fetchBytes(url) {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Download failed: HTTP ${response.status}`);
+    throw new Error(`Download failed: HTTP ${response.status} for ${url}`);
   }
   return new Uint8Array(await response.arrayBuffer());
 }

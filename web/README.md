@@ -33,8 +33,11 @@ not fetch Pyodide, reportlab's browser wheel or the fonts.
 
 Copy only the generated `index.html` and wheel into one folder on the other static
 site, preserving both filenames. Publish them together from the same build. The
-wheel URL is relative to the HTML, so the folder works at a site's root or under a
-subfolder such as `static/kincade/`. No other build files are needed at the host.
+page resolves the wheel from its directory, so the folder works at a site's root
+or under a subfolder such as `static/kincade/`. Directory URLs with or without a
+trailing slash, and explicit `index.html` URLs, all work without a host redirect.
+Page query strings and fragments do not affect asset paths. No other build files
+are needed at the host.
 
 The browser checks the wheel's SHA-256 before installing it. If the files come
 from different builds, initialization reports the site-wheel failure and asks the

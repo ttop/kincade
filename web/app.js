@@ -9,7 +9,6 @@
   const previewPageInset = 10;
   const previewToolbarHeight = 56;
   const previewScrollbarWidth = 1;
-  const firstVisit = " First visit downloads about 11 MB once.";
   let worker;
   let ready = false;
   let hasTree = false;
@@ -528,8 +527,11 @@
   }
 
   function initFailed(step, host, message) {
+    const hint = step === "Installing Kincade" && host === "this site" && message.startsWith("Download failed:")
+      ? " Reload the page. If the download still fails, report this URL to the site owner."
+      : "";
     byId("status").classList.remove("visually-hidden");
-    byId("status").textContent = `${step} failed (${host}): ${message}${firstVisit}`;
+    byId("status").textContent = `${step} failed (${host}): ${message}${hint}`;
     byId("retry").hidden = false;
   }
 
@@ -537,7 +539,7 @@
     switch (reply.type) {
       case "status":
         byId("status").classList.remove("visually-hidden");
-        byId("status").textContent = `${reply.text}${firstVisit}`;
+        byId("status").textContent = reply.text;
         break;
       case "ready":
         ready = true;
@@ -807,9 +809,15 @@
     }
     worker.addEventListener("message", receive);
     worker.addEventListener("error", (event) => initFailed("Starting Kincade", "browser", event.message));
+    // Static hosts can serve /kincade without redirecting to /kincade/.
+    // Resolve assets from that directory, also supporting / and /index.html.
+    const directoryPath = location.pathname.endsWith("/index.html")
+      ? location.pathname.slice(0, -"index.html".length)
+      : location.pathname.replace(/\/?$/, "/");
+    const siteDirectory = new URL(directoryPath, location.origin);
     worker.postMessage({
       type: "init", manifest, glue: byId("glue").textContent,
-      wheelUrl: new URL(manifest.wheel.name, location.href).href,
+      wheelUrl: new URL(manifest.wheel.name, siteDirectory).href,
     });
   } catch (error) {
     initFailed("Starting Kincade", "browser", error.message || String(error));

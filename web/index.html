@@ -16,6 +16,7 @@
     main { max-width: 86rem; margin: 0 auto; }
     h1 { margin: 0; font-size: 2rem; } h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
     p { margin: .5rem 0; } header { margin-bottom: .5rem; }
+    #status { overflow-wrap: anywhere; }
     .title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .85rem; }
     .header-metadata { display: flex; align-items: baseline; gap: .75rem; margin-left: auto; color: var(--muted); font-size: .85rem; white-space: nowrap; }
     .title-row p { margin: 0; } header > p { margin: .15rem 0 0; font-size: .85rem; }
@@ -94,7 +95,7 @@
     <div class="title-row"><h1>Kincade</h1><p>Make a cascading pedigree or fan chart PDF from a GEDCOM file</p><div class="header-metadata"><span id="version">Version</span><a href="https://github.com/ttop/kincade">GitHub</a></div></div>
     <p class="muted">Your GEDCOM file is read in this browser and never uploaded.</p>
   </header>
-  <div role="status" aria-live="polite"><span id="status">Loading Kincade… First visit downloads about 11 MB once.</span></div>
+  <div role="status" aria-live="polite"><span id="status">Loading Kincade…</span></div>
   <button id="retry" type="button" hidden>Retry</button>
   <div class="workspace">
   <div class="controls-rail">

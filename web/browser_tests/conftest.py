@@ -31,7 +31,7 @@ CSP = (
 
 
 @pytest.fixture(scope="session")
-def site():
+def site_files():
     CACHE.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "UV_CACHE_DIR": str(ROOT / "web/.cache/uv")}
     with tempfile.TemporaryDirectory(dir=CACHE, prefix="site-") as destination:
@@ -51,6 +51,12 @@ def site():
         )
         files = {p.name: p.read_bytes() for p in Path(destination).iterdir()}
     assert len(files) == 2
+    return files
+
+
+@pytest.fixture(scope="session")
+def site(site_files):
+    files = site_files
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):

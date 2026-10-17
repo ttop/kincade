@@ -144,7 +144,7 @@ def test_draw_text_never_starts_a_run_outside_the_measured_width(monkeypatch):
         r.x
         for r in runs(pdf)
         if r.y
-        == pytest.approx(kincade.pdf.LETTER.box_top[1] - 10 + kincade.pdf.NAME_BASE)
+        == pytest.approx(kincade.pdf.LETTER.box_top[1] - 5 + kincade.pdf.NAME_BASE)
         and r.x >= kincade.pdf.BOX_X0[1]  # not the number
     ]
     assert len(pieces) > 3  # kerned: drawn in several runs

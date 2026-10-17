@@ -106,7 +106,7 @@ def test_the_id_cap_top_matches_the_name_in_small_black_type(pedigree):
     record = next(r for r in runs(pdf) if r.text == "[I1]")
     y, scale = record.y, record.scale
     # Helvetica capitals rise 718 units per em
-    assert y == pytest.approx(geom.box_top[1] - 10 + NAME_BASE - (9 - 7) * 0.718)
+    assert y == pytest.approx(geom.box_top[1] - 5 + NAME_BASE - (9 - 7) * 0.718)
     name = next(r for r in runs(pdf) if r.text == "Jane ASHFORD")
     assert y - record.size * 0.718 == pytest.approx(name.y - name.size * 0.718)
     assert scale == pytest.approx(1.0)
@@ -137,10 +137,7 @@ def test_every_box_has_its_id_at_its_own_name_cap_top(pedigree):
     for r in runs(pdf):
         if re.fullmatch(r"\[I\d+\]", r.text):
             tops = [
-                geom.box_top[pos]
-                - (10 if pos == 1 else 0)
-                + NAME_BASE
-                - (9 - 7) * 0.718
+                geom.box_top[pos] - (5 if pos == 1 else 0) + NAME_BASE - (9 - 7) * 0.718
                 for pos in range(1, 8)
             ]
             assert any(r.y == pytest.approx(t) for t in tops), r

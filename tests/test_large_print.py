@@ -199,11 +199,13 @@ def test_the_right_column_fills_the_usable_area_with_one_gap_as_in_normal_print(
 
 
 @pytest.mark.parametrize("paper", PAPERS)
-def test_each_left_box_is_centered_on_its_parents(paper):
+def test_each_left_box_is_centered_between_its_parents_edges(paper):
     g = large(paper)
     center = {p: g.box_top[p] + g.h(p) / 2 for p in range(1, 8)}
     for p in (1, 2, 3):
-        assert center[p] == pytest.approx((center[2 * p] + center[2 * p + 1]) / 2)
+        assert center[p] == pytest.approx(
+            (g.box_top[2 * p] + g.h(2 * p) + g.box_top[2 * p + 1]) / 2
+        )
         assert kincade.pdf.stub_y(p, g) == pytest.approx(center[p])
 
 
@@ -219,7 +221,8 @@ def test_a_chart_draws_seven_boxes_at_the_large_print_geometry(pedigree, paper):
         _x, _top, w, h = next(
             b
             for b in boxes
-            if b[0] == approx(g.box_x0[pos]) and b[1] == approx(g.box_top[pos])
+            if b[0] == approx(g.box_x0[pos])
+            and b[1] == approx(g.box_top[pos] - (g.leading / 2 if pos == 1 else 0))
         )
         assert (w, h) == (
             approx(g.box_w),
@@ -286,7 +289,7 @@ def test_baselines_and_the_left_inset_scale(pedigree):
         "b. 14 Feb 1980",
         "bp. Springfield, Illinois",
     ]
-    top = g.box_top[1]
+    top = g.box_top[1] - g.leading / 2
     assert box1[0].y == approx(top + g.name_base)
     assert box1[1].y == approx(top + g.name_base + g.detail_gap)
     assert box1[2].y == approx(top + g.name_base + g.detail_gap + g.leading)
@@ -323,7 +326,9 @@ def test_box_numbers_sit_left_of_the_box_level_with_the_name_or_the_last_line(pe
         assert numbers[str(pos)].right() == approx(g.box_x0[pos] - 4 * SCALE)
     # the left zone and the right column's fathers: level with the name
     for pos in (1, 2, 3, 4, 6):
-        assert numbers[str(pos)].y == approx(g.box_top[pos] + g.name_base)
+        assert numbers[str(pos)].y == approx(
+            g.box_top[pos] - (g.leading / 2 if pos == 1 else 0) + g.name_base
+        )
     for pos in (5, 7):  # the right column's mothers: level with the last line
         assert numbers[str(pos)].y == approx(g.box_top[pos] + g.h(pos) - g.bottom_pad)
 
@@ -365,7 +370,9 @@ def test_the_record_id_is_scaled_and_aligned_with_the_name_cap_top(pedigree):
     record = next(r for r in page if r.text == "[I1]")
     assert record.font == "Helvetica" and record.size == approx(7 * SCALE)
     assert record.right() == approx(g.box_x0[1] + g.box_w - g.inset_right, abs=0.01)
-    assert record.y == approx(g.box_top[1] + g.name_base - (g.size - g.id_size) * 0.718)
+    assert record.y == approx(
+        g.box_top[1] - g.leading / 2 + g.name_base - (g.size - g.id_size) * 0.718
+    )
     name = next(r for r in page if r.text == "Jane ASHFORD")
     assert name.y - name.size * 0.718 == approx(record.y - record.size * 0.718)
 

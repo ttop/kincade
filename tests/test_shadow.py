@@ -96,7 +96,7 @@ def test_no_shadow_layers_without_the_flag_and_the_plain_layout(large_print):
     expected = [
         (
             geom.box_x0[p],
-            geom.box_top[p] - (10 if p == 1 and not large_print else 0),
+            geom.box_top[p] - (geom.leading / 2 if p == 1 else 0),
             geom.box_w,
             geom.h(p) + (10 * geom.scale if p == 1 else 0),
         )

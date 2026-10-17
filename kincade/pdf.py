@@ -720,23 +720,26 @@ TEXT_WIDTH = BOX_W - TEXT_INSET_LEFT - TEXT_INSET_RIGHT
 
 def _box_tops(y_bottom: float, large_print: bool = False) -> dict[int, float]:
     """The right column (the last generation's boxes) stacked from Y_TOP to y_bottom
-    with one uniform gap that fills the space exactly, in both print sizes; every other
-    box centered on its two parents' centers. So the extra space of large print goes to
-    the left zone, where the boxes spread out.
+    with one uniform gap that fills the space exactly, in both print sizes. Other
+    boxes sit midway between their parents' facing edges. The root sits between its
+    nearest left-zone neighbors, which are boxes 5 and 6 in normal print.
     """
     scale = LARGE_SCALE if large_print else 1.0
     first = 2 ** (page_depth(large_print) - 1)
     right = range(first, 2 * first)
-    heights = {pos: box_height(pos, scale) for pos in right}
-    gap = (y_bottom - Y_TOP - sum(heights.values())) / (len(heights) - 1)
+    heights = {pos: box_height(pos, scale) for pos in range(1, 2 * first)}
+    gap = (y_bottom - Y_TOP - sum(heights[pos] for pos in right)) / (len(right) - 1)
     y = Y_TOP
-    center = {}
+    tops = {}
     for pos in right:
-        center[pos] = y + heights[pos] / 2
+        tops[pos] = y
         y += heights[pos] + gap
     for pos in range(first - 1, 0, -1):
-        center[pos] = (center[2 * pos] + center[2 * pos + 1]) / 2
-    return {pos: center[pos] - box_height(pos, scale) / 2 for pos in center}
+        above, below = (
+            (5, 6) if pos == 1 and not large_print else (2 * pos, 2 * pos + 1)
+        )
+        tops[pos] = (tops[above] + heights[above] + tops[below] - heights[pos]) / 2
+    return tops
 
 
 def _scaled(value: float) -> property:

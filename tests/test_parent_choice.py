@@ -342,7 +342,7 @@ def test_the_name_fit_includes_the_note_and_the_id():
     assert name.text.endswith("(adopted)")
     assert name.right() <= x_id - 6 + 0.01  # at least 6 pt clear of the ID
     assert name.y == pytest.approx(
-        kincade.pdf.LETTER.box_top[1] - 10 + kincade.pdf.NAME_BASE
+        kincade.pdf.LETTER.box_top[1] - 5 + kincade.pdf.NAME_BASE
     )
 
 

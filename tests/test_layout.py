@@ -161,15 +161,40 @@ def test_cached_page_geometry_has_read_only_box_positions():
             positions[1] = 0
 
 
-def test_every_box_is_centered_on_its_parents():
-    center = {
-        p: kincade.pdf.LETTER.box_top[p] + kincade.pdf.box_height(p) / 2
-        for p in range(1, 16)
-    }
-    for p in range(1, 8):
-        assert center[p] == pytest.approx((center[2 * p] + center[2 * p + 1]) / 2)
-        # connectors meet the vertical center
-        assert kincade.pdf.stub_y(p, kincade.pdf.LETTER) == pytest.approx(center[p])
+@pytest.mark.parametrize("paper", PAPERS)
+@pytest.mark.parametrize("large_print", PRINTS)
+@pytest.mark.parametrize("shadow", [False, True])
+def test_rendered_boxes_have_equal_gaps_to_the_edges_above_and_below(
+    pedigree, paper, large_print, shadow
+):
+    pdf = render(
+        pedigree, paper=paper, large_print=large_print, shadow=shadow, index=False
+    )
+    first_right = 4 if large_print else 8
+    # Both the enlarged initial root and an ordinary continuation root fit evenly.
+    for page in (0, 1):
+        boxes = dict(enumerate(rectangles(pdf, "B*", page), 1))
+        for pos in range(1, first_right):
+            above, below = (
+                (5, 6) if pos == 1 and not large_print else (2 * pos, 2 * pos + 1)
+            )
+            _, top, _, height = boxes[pos]
+            gap_above = top - (boxes[above][1] + boxes[above][3])
+            gap_below = boxes[below][1] - (top + height)
+            assert gap_above == pytest.approx(gap_below, abs=0.001), (page, pos)
+        gaps = [
+            boxes[p + 1][1] - (boxes[p][1] + boxes[p][3])
+            for p in range(first_right, 2 * first_right - 1)
+        ]
+        assert gaps == pytest.approx([gaps[0]] * len(gaps), abs=0.001)
+
+
+def test_connectors_meet_each_box_at_its_vertical_center():
+    geom = kincade.pdf.LETTER
+    for pos in geom.box_top:
+        assert kincade.pdf.stub_y(pos, geom) == pytest.approx(
+            geom.box_top[pos] + geom.h(pos) / 2
+        )
 
 
 def test_left_zone_boxes_do_not_touch_and_everything_is_on_the_page():
@@ -190,7 +215,7 @@ def test_left_zone_boxes_do_not_touch_and_everything_is_on_the_page():
 
 def test_text_baselines_leave_room_above_and_below(pedigree):
     pdf = render(pedigree, generations=4, index=False)
-    top, h = kincade.pdf.LETTER.box_top[1] - 10, 88
+    top, h = kincade.pdf.LETTER.box_top[1] - 5, 88
     box1 = [
         (r.y, r.text)
         for r in runs(pdf)
@@ -313,13 +338,13 @@ A4_W, A4_H = 595.28, 841.89
 
 
 LETTER_CHART1_BOXES = [  # chart 1 boxes 1-15 on Letter: (x, y, w, h) in PDF points
-    (30.0, 358.75, 215.0, 88.0),
-    (73.0, 537.75, 215.0, 78.0),
-    (73.0, 189.75, 215.0, 58.0),
-    (116.0, 627.25, 215.0, 78.0),
-    (116.0, 458.25, 215.0, 58.0),
-    (116.0, 269.25, 215.0, 78.0),
-    (116.0, 100.25, 215.0, 58.0),
+    (30.0, 353.75, 215.0, 88.0),
+    (73.0, 527.75, 215.0, 78.0),
+    (73.0, 179.75, 215.0, 58.0),
+    (116.0, 622.25, 215.0, 78.0),
+    (116.0, 453.25, 215.0, 58.0),
+    (116.0, 264.25, 215.0, 78.0),
+    (116.0, 95.25, 215.0, 58.0),
     (358.0, 672.0, 215.0, 78.0),
     (358.0, 592.5, 215.0, 58.0),
     (358.0, 493.0, 215.0, 78.0),
@@ -419,7 +444,7 @@ def test_long_box_text_starts_5_points_in_and_ends_3_points_short_of_the_edge():
         tree,
         Options(today=TODAY, fonts="base14", compress=False, index=False, footer=""),
     )
-    name_y = kincade.pdf.LETTER.box_top[1] - 10 + kincade.pdf.NAME_BASE
+    name_y = kincade.pdf.LETTER.box_top[1] - 5 + kincade.pdf.NAME_BASE
     (run,) = [
         r
         for r in runs(pdf)

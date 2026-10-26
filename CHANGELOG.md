@@ -30,6 +30,17 @@
   `fan_file_name`, `blank_file_name`), so `--lang de` saves
   `Ahnentafel Jane Doe.pdf`. A root with no usable name gives
   `cascading pedigree.pdf`.
+- Fan years come from the language file (`years.lifespan`, `born_only`,
+  `died_only`): German prints a birth year alone as `* 1980` and a death year
+  alone as `† 1960`.
+- The `Mc` of McCLURE is the `[sort]` setting `keep_case_prefixes` (default
+  `["Mc"]`), and a prefix keeps its case only when a capital follows it, so
+  Mcclure prints as MCCLURE.
+- `[sort.surname_start]` replaces the start of a surname's sort key, such as
+  `mc = "mac"`. It replaces `mc_as_mac`; `mc_as_mac = true` still reads as
+  `mc = "mac"`.
+- `--find` and the people an ambiguous `--root` lists print names with the chart
+  language's particles and prefixes.
 - The browser page speaks English, German, Spanish, French and Italian, chosen
   from the browser's languages, the header or `?lang=`. Chart language sets the
   PDFs' language and follows the page's until another is chosen.

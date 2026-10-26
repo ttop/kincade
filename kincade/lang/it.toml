@@ -177,6 +177,10 @@ before = "ante {y}"
 after = "post {y}"
 between = "ca. {y}"
 
+lifespan = "{born}–{died}"
+born_only = "{born}–"
+died_only = "–{died}"
+
 [sort]
 # The index order of Italian lists. The printed names do not change. Accents sort as
 # their base letters. Particles are part of an Italian surname and are not skipped: De
@@ -184,6 +188,8 @@ between = "ca. {y}"
 # from the sort key first, so D’Angelo files as dangelo.
 after_z = []
 ignore_particles = []
-mc_as_mac = false
+keep_case_prefixes = ["Mc"]
 
 [sort.expand]
+
+[sort.surname_start]

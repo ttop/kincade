@@ -27,13 +27,19 @@ from pdfread import drawn
 ENGLISH_FOOTER = "Created 10 Oct 2026 using Kincade"
 
 
-TABLE_LEAVES = ("days.", "dates.with_day.", "dates.rewrite.", "sort.expand.")
+TABLE_LEAVES = (
+    "days.",
+    "dates.with_day.",
+    "dates.rewrite.",
+    "sort.expand.",
+    "sort.surname_start.",
+)
 
 
 def leaves(node, prefix=""):
     """Dotted paths of every leaf (a string, a list of strings, or a table whose keys
-    are data: days, dates.with_day, dates.rewrite, sort.expand) of a nested strings
-    dict.
+    are data: days, dates.with_day, dates.rewrite, sort.expand, sort.surname_start) of
+    a nested strings dict.
     """
     # the keys of these tables are data, so each table is one leaf
     if isinstance(node, dict) and prefix not in TABLE_LEAVES:
@@ -136,6 +142,9 @@ def test_default_strings_are_the_english_wording():
         "before": "bef {y}",
         "after": "aft {y}",
         "between": "bet {y}",
+        "lifespan": "{born}–{died}",
+        "born_only": "{born}–",
+        "died_only": "–{died}",
     }
 
 
@@ -151,6 +160,9 @@ def test_german_fan_title_and_year_words():
         "before": "vor {y}",
         "after": "nach {y}",
         "between": "zw. {y}",
+        "lifespan": "{born}–{died}",
+        "born_only": "* {born}",
+        "died_only": "† {died}",
     }
 
 

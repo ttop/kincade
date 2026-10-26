@@ -396,6 +396,28 @@ def test_cli_find_lists_matches(capsys):
     ]
 
 
+def test_find_prints_names_with_the_chart_languages_surname_rules(tmp_path, capsys):
+    source = tmp_path / "t.ged"
+    source.write_bytes(
+        ged(
+            "0 @I1@ INDI",
+            "1 NAME Anna /von der Heide/",
+            "1 FAMS @F1@",
+            "0 @I2@ INDI",
+            "1 NAME Otto /zur Lippe/",
+            "1 FAMS @F1@",
+            "0 @F1@ FAM",
+            "1 WIFE @I1@",
+            "1 HUSB @I2@",
+        )
+    )
+    assert kincade.cli.main([str(source), "--find", "Heide", "--lang", "de"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        "I1\tAnna von der HEIDE\t",
+        "    F1\tOtto zur LIPPE\t(default)",
+    ]
+
+
 def test_find_with_no_match_says_so_and_exits_1(capsys):
     assert kincade.cli.main([str(FIX / "pedigree.ged"), "--find", "zzzz"]) == 1
     assert capsys.readouterr() == ("", "kincade: no person matches 'zzzz'\n")

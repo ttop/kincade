@@ -168,6 +168,12 @@ before = "vor {y}"
 after = "nach {y}"
 between = "zw. {y}"
 
+# * and † mark a birth or death year alone; a stand-in alone keeps the dash:
+# get. 1852–.
+lifespan = "{born}–{died}"
+born_only = "* {born}"
+died_only = "† {died}"
+
 [sort]
 # The index order of German name registers, DIN 5007-2 "Namensliste". ä, ö and ü sort
 # as ae, oe and ue, so Müller and Mueller sort together, then Muller, then Mutz. ß sorts
@@ -179,9 +185,11 @@ between = "zw. {y}"
 # as obrien), and a hyphen reads as a space.
 after_z = []
 ignore_particles = ["von", "zu", "vom", "zum", "zur", "und", "van", "de", "der", "den", "dem", "ten", "ter"]
-mc_as_mac = false
+keep_case_prefixes = ["Mc"]
 
 [sort.expand]
 "ä" = "ae"
 "ö" = "oe"
 "ü" = "ue"
+
+[sort.surname_start]

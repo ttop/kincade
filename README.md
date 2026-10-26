@@ -410,7 +410,11 @@ hyphen as a space, so hyphenated names file word by word. A language file's
 | `expand` | `"ü" = "ue"` sorts Müller with Mueller. |
 | `after_z` | `["å", "ä", "ö"]` places these letters after Z, in that order. |
 | `ignore_particles` | `["von", "der"]` files von der Heide under H; `["d’"]` files d’Artagnan under A; `["de la"]` files de la Fuente under F. The skipped particles print in recorded case (Anna von der HEIDE) and, in the index, after the given name (HEIDE, Anna von der). |
-| `mc_as_mac` | `true` files McClure with MacClure; the default is `false`. |
+| `surname_start` | `mc = "mac"` files McClure with MacClure. The 1.0 setting `mc_as_mac = true` reads as this. |
+
+The same table's `keep_case_prefixes` lists the prefixes that keep their case when a
+surname prints in capitals, if a capital follows them: the default `["Mc"]` prints
+McClure as McCLURE, and adding `"Mac"` prints MacDonald as MacDONALD but Macy as MACY.
 
 
 The [English template](kincade/lang/en.toml) documents every key. Each bundled
@@ -424,7 +428,8 @@ Italian keeps particles as part of the surname.
 Kincade reads GEDCOM 5.5, 5.5.1 and 7.0 files. 
 
 Both chart types, the pedigree name index, and `--find` results uppercase
-surnames, retaining a leading `Mc` as in `McCLURE`. Use `--preserve-case` to keep
+surnames, keeping the case of the language's skipped particles and
+`keep_case_prefixes`, as in `Anna von der HEIDE` and `McCLURE`. Use `--preserve-case` to keep
 the recorded surname case instead.
 
 Dates are formatted for the selected language. Unrecognized date text is

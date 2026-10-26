@@ -207,8 +207,12 @@ PDF metadata and the default fan title. `lang.fmt_surname` capitalizes letter by
 letter and keeps a letter whose capital is longer (ß, not SS). Leading particles
 the language's `ignore_particles` skips keep their recorded case (Anna von der
 HEIDE), and `lang.index_name` prints them after the given name (HEIDE, Anna von
-der), so an entry reads as it files. `SortRules.particle_end` finds where they end. The option does not change stored names,
-matching or index sorting. Search rows capitalize surnames.
+der), so an entry reads as it files. `SortRules.particle_end` finds where they end.
+After the particles, `SortRules.capitals` keeps the case of a `keep_case_prefixes`
+prefix that begins the surname as listed and is followed by a capital (McClure as
+McCLURE, Mcclure as MCCLURE). Without a language's rules, as in the page's search
+rows, the English settings apply; `--find` uses the chart language's. The option does
+not change stored names, matching or index sorting. Search rows capitalize surnames.
 Both download filenames use `output_root_name(tree, root_id, ...)` with the
 chart's privacy and parent settings, plus Large print for pedigree. It returns
 the root's recorded name spelling or the chart language's living label when
@@ -720,8 +724,11 @@ Surnames are uppercase unless `preserve_case=True` keeps the recorded spelling;
 private cells conceal the name before formatting. Caller-built fan cells are
 already ready to draw and keep their supplied case.
 
-`fanplan._years` joins birth and death parts with an en dash, using
-`charts.birth_source` and `death_source` with `event_standins`. `_year_text`
+`fanplan._years` fills the language's `years.lifespan` template with the birth
+and death parts, from `charts.birth_source` and `death_source` with
+`event_standins`. A birth year alone fills `years.born_only` and a death year alone
+`years.died_only`; a stand-in or the deceased word alone fills `lifespan` with the
+other side empty, since its word already names the event. `_year_text`
 takes the first structured year, keeping double years as `lang.format_date`
 writes them. About, before/to, after/from and between/from-to use the
 language's `years.about`, `before`, `after` and `between` words; an estimated
@@ -731,7 +738,8 @@ the first isolated four-digit number in text supplies the year without a word.
 `years.christening`, `burial` or `cremation` word only when a year exists. A
 death record or filled death stand-in without a year gives `years.deceased`.
 When neither part has text, years are empty. English examples are `1820–1891`,
-`chr 1852–`, `abt 1820–bur 1871` and `1840–Deceased`.
+`1980–`, `chr 1852–`, `abt 1820–bur 1871` and `1840–Deceased`; German writes a year
+alone as `* 1980` and `† 1960`.
 
 With `exclude_private`, `charts.living_checker` uses the unlimited pedigree
 plan, the selected parent mode and today's year. Possibly living people
@@ -842,7 +850,7 @@ numbers are no years of ours as `year_unknown`.
 3. the year of the birth, or of the christening standing in for it when the stand-ins are on; a missing or hidden year sorts after every year;
 4. the suffix's key, then the record ID.
 
-`lang.SortRules.fold` makes each key from the name as stored, never from its printed capitals: casefold and NFC; for a surname, drop an elided particle (an `ignore_particles` item ending in an apostrophe, such as `d’`) from the front when letters follow it, matching either apostrophe; drop punctuation, with a hyphen or dash (Unicode Pd) becoming a space, so a hyphenated name files word by word; for a surname, the remaining `ignore_particles` as whole words or phrases of words, longest first, again and again, never the last word, then `mc_as_mac`; apply `expand` in one pass, longest key first; replace each `after_z` letter, including letters produced by an expansion, by a private-use character from U+E000, which sorts after z and after the `~` of an expansion; then NFKD, dropping the combining marks. An expansion such as `"aa" = "å"` sorts with Å when `after_z` includes `å`. The sort changes no spelling; only the skipped particles' case and place print differently, as above.
+`lang.SortRules.fold` makes each key from the name as stored, never from its printed capitals: casefold and NFC; for a surname, drop an elided particle (an `ignore_particles` item ending in an apostrophe, such as `d’`) from the front when letters follow it, matching either apostrophe; drop punctuation, with a hyphen or dash (Unicode Pd) becoming a space, so a hyphenated name files word by word; for a surname, the remaining `ignore_particles` as whole words or phrases of words, longest first, again and again, never the last word, then replace the longest `surname_start` key that begins what is left (`mc = "mac"`); apply `expand` in one pass, longest key first; replace each `after_z` letter, including letters produced by an expansion, by a private-use character from U+E000, which sorts after z and after the `~` of an expansion; then NFKD, dropping the combining marks. An expansion such as `"aa" = "å"` sorts with Å when `after_z` includes `å`. The sort changes no spelling; only the skipped particles' case and place print differently, as above.
 
 Each entry ends with the boxes where the person is drawn, each from the language's `index.reference` template (`{chart}-{pos}`, German `{chart}/{pos}`), joined by commas.
 

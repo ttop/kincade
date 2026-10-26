@@ -7,6 +7,7 @@ strings argument override it (load_strings). Imports only the model.
 from __future__ import annotations
 
 import copy
+import functools
 import os
 import re
 import tomllib
@@ -119,9 +120,28 @@ DEFAULT_STRINGS: dict[str, Any] = {
         "before": "bef {y}",
         "after": "aft {y}",
         "between": "bet {y}",
+        # a fan cell's years: both, the birth alone, the death alone
+        "lifespan": "{born}–{died}",
+        "born_only": "{born}–",
+        "died_only": "–{died}",
     },
-    # The name index order. The English defaults sort alphabetically.
-    "sort": {"expand": {}, "after_z": [], "ignore_particles": [], "mc_as_mac": False},
+    # The name index order, and the surname prefixes that keep their case in capitals.
+    # The English defaults sort alphabetically.
+    "sort": {
+        "expand": {},
+        "after_z": [],
+        "ignore_particles": [],
+        "surname_start": {},
+        "keep_case_prefixes": ["Mc"],
+    },
+}
+
+# the fields of the [years] keys that are not a year piece ({y})
+_YEARS_FIELDS: dict[str, tuple[str, ...]] = {
+    "deceased": (),
+    "lifespan": ("born", "died"),
+    "born_only": ("born",),
+    "died_only": ("died",),
 }
 
 # The placeholders each leaf of DEFAULT_STRINGS may use
@@ -159,13 +179,14 @@ PLACEHOLDERS: dict[str, tuple[str, ...]] = {
     **{f"labels.{key}": () for key in DEFAULT_STRINGS["labels"]},
     **{f"dates.{key}": () for key in DEFAULT_STRINGS["dates"]},
     **{
-        f"years.{key}": () if key == "deceased" else ("y",)
+        f"years.{key}": _YEARS_FIELDS.get(key, ("y",))
         for key in DEFAULT_STRINGS["years"]
     },
     "sort.expand": (),
     "sort.after_z": (),
     "sort.ignore_particles": (),
-    "sort.mc_as_mac": (),
+    "sort.surname_start": (),
+    "sort.keep_case_prefixes": (),
 }
 
 # A template field is {name}, where name is one of the placeholders its key
@@ -382,12 +403,6 @@ def _check_days(source: str, path: str, value: Any, base: Any) -> dict[str, str]
     return out
 
 
-def _check_mc_as_mac(source: str, path: str, value: Any, base: Any) -> bool:
-    if not isinstance(value, bool):
-        raise LangError(f"{source}: {path} must be true or false")
-    return value
-
-
 def _check_expand(source: str, path: str, value: Any, base: Any) -> dict[str, str]:
     if not isinstance(value, Mapping):
         raise LangError(
@@ -401,6 +416,42 @@ def _check_expand(source: str, path: str, value: Any, base: Any) -> dict[str, st
             raise LangError(f"{source}: {path}[{key!r}] must be a string")
         out[_sort_text(key)] = _sort_text(replacement)
     return out
+
+
+def _check_surname_start(
+    source: str, path: str, value: Any, base: Any
+) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise LangError(
+            f'{source}: {path} must be a table of start = replacement, such as mc = "mac"'
+        )
+    out = dict(base)
+    for key, replacement in value.items():
+        start = _sort_text(key) if isinstance(key, str) else ""
+        # the start is matched after punctuation is dropped, so it can hold none
+        if not start.strip() or _letters_digits_and_spaces(start) != start:
+            raise LangError(
+                f"{source}: {path} keys must be letters, digits and single spaces, "
+                "such as mc"
+            )
+        if not isinstance(replacement, str):
+            raise LangError(f"{source}: {path}[{key!r}] must be a string")
+        out[start] = _sort_text(replacement)
+    return out
+
+
+def _check_keep_case_prefixes(
+    source: str, path: str, value: Any, base: Any
+) -> list[str]:
+    if not isinstance(value, list) or not all(
+        isinstance(v, str) and v and not any(ch.isspace() for ch in v) for v in value
+    ):
+        raise LangError(
+            f'{source}: {path} must be a list of prefixes without spaces, such as ["Mc"]'
+        )
+    for prefix in value:
+        _check_text(source, path, prefix, ())
+    return list(value)
 
 
 def _check_after_z(source: str, path: str, value: Any, base: Any) -> list[str]:
@@ -496,8 +547,21 @@ _OWN_CHECKS = {
     "sort.expand": _check_expand,
     "sort.after_z": _check_after_z,
     "sort.ignore_particles": _check_ignore_particles,
-    "sort.mc_as_mac": _check_mc_as_mac,
+    "sort.surname_start": _check_surname_start,
+    "sort.keep_case_prefixes": _check_keep_case_prefixes,
 }
+
+
+def _old_mc_as_mac(source: str, path: str, value: Any, out: dict[str, Any]) -> None:
+    """Version 1.0's mc_as_mac: true is the surname_start entry mc = "mac"."""
+    if not isinstance(value, bool):
+        raise LangError(f"{source}: {path} must be true or false")
+    if value:
+        out["surname_start"] = {**out["surname_start"], "mc": "mac"}
+
+
+# keys of earlier versions, each read into the settings that replace it
+_OLD_KEYS = {"sort.mc_as_mac": _old_mc_as_mac}
 
 
 def _layer(
@@ -514,10 +578,12 @@ def _layer(
     out = dict(base)
     for key, value in over.items():
         path = f"{prefix}{key}"
-        if key not in base:
+        if path in _OLD_KEYS:
+            _OLD_KEYS[path](source, path, value, out)
+        elif key not in base:
             notes.append(f"{source}: unknown key {path!r} ignored")
         elif path in _OWN_CHECKS:
-            out[key] = _OWN_CHECKS[path](source, path, value, base[key])
+            out[key] = _OWN_CHECKS[path](source, path, value, out[key])
         elif isinstance(base[key], dict):
             if not isinstance(value, Mapping):
                 raise LangError(f"{source}: {path} must be a table")
@@ -562,7 +628,7 @@ def load_strings(
 
 def map_leaves(node: Any, fn: Callable[[str], str]) -> Any:
     """A copy of a strings dict with fn applied to each string leaf, including list
-    items. Keys and non-string values, such as mc_as_mac, are copied as given."""
+    items. Keys and non-string values are copied as given."""
     if isinstance(node, dict):
         return {key: map_leaves(value, fn) for key, value in node.items()}
     if isinstance(node, list):
@@ -592,14 +658,16 @@ def fmt_surname(
 ) -> str:
     """The surname as names print it: in capitals unless preserve_case. Leading
     particles that `rules` skips when sorting (von der, de la, d’) keep their recorded
-    case: Anna von der HEIDE. A letter whose capital is two letters (ß) stays as it is.
+    case: Anna von der HEIDE; so does a keep_case_prefixes prefix (McCLURE). A letter
+    whose capital is two letters (ß) stays as it is. Without `rules`, the English
+    settings apply.
     """
     s = surname.strip()
     if preserve_case:
         return s
-    cut = rules.particle_end(s) if rules else 0
-    front, rest = s[:cut], s[cut:]
-    return front + ("Mc" + _upper(rest[2:]) if rest.startswith("Mc") else _upper(rest))
+    rules = rules or _english_rules()
+    cut = rules.particle_end(s)
+    return s[:cut] + rules.capitals(s[cut:])
 
 
 def _upper(text: str) -> str:
@@ -712,9 +780,10 @@ def index_name(
     "HEIDE, Anna von der". preserve_case keeps recorded case.
     """
     s = p.surname.strip()
-    cut = rules.particle_end(s) if rules else 0
+    rules = rules or _english_rules()
+    cut = rules.particle_end(s)
     rest = _with_suffix(squash(f"{p.prefix} {p.given} {s[:cut]}"), p.suffix)
-    surname = fmt_surname(s[cut:], preserve_case)
+    surname = s[cut:] if preserve_case else rules.capitals(s[cut:])
     return f"{surname}, {rest}" if surname and rest else surname or rest
 
 
@@ -734,7 +803,8 @@ class SortRules:
     Order of operations: casefold and NFC; then, for a surname only, an elided particle
     (one of ignore_particles that ends in an apostrophe, such as d’) is dropped from the
     front; then punctuation is dropped (letters, digits and spaces only); then, for a
-    surname only, the other ignore_particles and mc_as_mac; then
+    surname only, the other ignore_particles, then the longest surname_start that begins
+    what is left is replaced; then
     expand (one pass, longest key first, so a replacement is never replaced again);
     then after_z letters become sentinels that sort after z and after the "~" of any
     expansion; and last NFKD accent folding, which drops the combining marks. The
@@ -756,7 +826,10 @@ class SortRules:
         self.elided = sorted(
             (p for p in particles if p.endswith("'")), key=len, reverse=True
         )
-        self.mc_as_mac = sort["mc_as_mac"]
+        self.surname_start = dict(sort["surname_start"])
+        # longest first, so "mac" is tried before "ma"
+        self._starts = sorted(self.surname_start, key=len, reverse=True)
+        self._keep_case = sorted(sort["keep_case_prefixes"], key=len, reverse=True)
         self.after_z = {
             letter: chr(_AFTER_Z + i) for i, letter in enumerate(sort["after_z"])
         }
@@ -772,8 +845,9 @@ class SortRules:
         s = _letters_digits_and_spaces(s)
         if surname:
             s = self._skip_particles(s)
-            if self.mc_as_mac and s.startswith("mc"):
-                s = "mac" + s[2:]
+            start = next((key for key in self._starts if s.startswith(key)), None)
+            if start is not None:
+                s = self.surname_start[start] + s[len(start) :]
         if self._expand_re is not None:
             s = self._expand_re.sub(lambda m: self.expand[m.group(0)], s)
         if self.after_z:
@@ -783,6 +857,16 @@ class SortRules:
             for ch in unicodedata.normalize("NFKD", s)
             if not unicodedata.combining(ch)
         )
+
+    def capitals(self, surname: str) -> str:
+        """The surname in capitals, but a keep_case_prefixes prefix that begins it, as
+        listed and followed by a capital, keeps its case: McClure prints as McCLURE,
+        and Mcclure as MCCLURE."""
+        for prefix in self._keep_case:
+            rest = surname[len(prefix) :]
+            if surname.startswith(prefix) and rest[:1].isupper():
+                return prefix + _upper(rest)
+        return _upper(surname)
 
     def _skip_elided(self, s: str) -> str:
         """Drop an elided particle from the front, if a name is left after it (so
@@ -841,3 +925,9 @@ class SortRules:
             [_letters_digits_and_spaces(_sort_text(m.group())) for m in words]
         )
         return words[n].start() if n else 0
+
+
+@functools.cache
+def _english_rules() -> SortRules:
+    """The English [sort] settings, for names formatted without a language's rules."""
+    return SortRules(DEFAULT_STRINGS["sort"])

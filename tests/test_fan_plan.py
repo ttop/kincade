@@ -157,31 +157,31 @@ def test_defaults_give_six_generations_and_uppercase_surnames():
 @pytest.mark.parametrize(
     "born,expected",
     [
-        (Date("exact", Day(1820, 5, 12)), ("1820–", "1820–")),
-        (Date("about", Day(1820)), ("abt 1820–", "um 1820–")),
-        (Date("exact", Day(1820), quality="estimated"), ("abt 1820–", "um 1820–")),
-        (Date("exact", Day(1820), quality="calculated"), ("abt 1820–", "um 1820–")),
-        (Date("before", Day(1820)), ("bef 1820–", "vor 1820–")),
-        (Date("to", Day(1820)), ("bef 1820–", "vor 1820–")),
-        (Date("after", Day(1820)), ("aft 1820–", "nach 1820–")),
-        (Date("from", Day(1820)), ("aft 1820–", "nach 1820–")),
-        (Date("between", Day(1820), Day(1825)), ("bet 1820–", "zw. 1820–")),
-        (Date("from_to", Day(1820), Day(1825)), ("bet 1820–", "zw. 1820–")),
-        (Date("before", Day(1820), quality="estimated"), ("bef 1820–", "vor 1820–")),
+        (Date("exact", Day(1820, 5, 12)), ("1820–", "* 1820")),
+        (Date("about", Day(1820)), ("abt 1820–", "* um 1820")),
+        (Date("exact", Day(1820), quality="estimated"), ("abt 1820–", "* um 1820")),
+        (Date("exact", Day(1820), quality="calculated"), ("abt 1820–", "* um 1820")),
+        (Date("before", Day(1820)), ("bef 1820–", "* vor 1820")),
+        (Date("to", Day(1820)), ("bef 1820–", "* vor 1820")),
+        (Date("after", Day(1820)), ("aft 1820–", "* nach 1820")),
+        (Date("from", Day(1820)), ("aft 1820–", "* nach 1820")),
+        (Date("between", Day(1820), Day(1825)), ("bet 1820–", "* zw. 1820")),
+        (Date("from_to", Day(1820), Day(1825)), ("bet 1820–", "* zw. 1820")),
+        (Date("before", Day(1820), quality="estimated"), ("bef 1820–", "* vor 1820")),
         (
             Date("between", Day(1820), Day(1825), quality="calculated"),
-            ("bet 1820–", "zw. 1820–"),
+            ("bet 1820–", "* zw. 1820"),
         ),
-        (Date("between", Day(month=5), Day(1825)), ("bet 1825–", "zw. 1825–")),
-        (Date("exact", Day(1730, dual_year=1731)), ("1730/31–", "1730/31–")),
-        (Date("exact", Day(1799, dual_year=1800)), ("1799/00–", "1799/00–")),
-        (Date("text", text="around 1820 or 1825"), ("1820–", "1820–")),
-        (Date("text", text="11820 then 1825"), ("1825–", "1825–")),
+        (Date("between", Day(month=5), Day(1825)), ("bet 1825–", "* zw. 1825")),
+        (Date("exact", Day(1730, dual_year=1731)), ("1730/31–", "* 1730/31")),
+        (Date("exact", Day(1799, dual_year=1800)), ("1799/00–", "* 1799/00")),
+        (Date("text", text="around 1820 or 1825"), ("1820–", "* 1820")),
+        (Date("text", text="11820 then 1825"), ("1825–", "* 1825")),
         (Date("text", text="18200"), ("", "")),
         (Date("text", text="spring"), ("", "")),
-        (Date("text", text="abt 1820", quality="estimated"), ("1820–", "1820–")),
-        (Date("exact", Day(1820), text="phrase says 2000"), ("1820–", "1820–")),
-        (Date("about", Day(month=5), text="around 1820"), ("1820–", "1820–")),
+        (Date("text", text="abt 1820", quality="estimated"), ("1820–", "* 1820")),
+        (Date("exact", Day(1820), text="phrase says 2000"), ("1820–", "* 1820")),
+        (Date("about", Day(month=5), text="around 1820"), ("1820–", "* 1820")),
         (Date("exact", Day(1820), text="1820", year_unknown=True), ("", "")),
         (Date("exact", Day(month=5, day=12)), ("", "")),
         (None, ("", "")),
@@ -223,11 +223,11 @@ def test_an_undated_death_without_a_birth_still_says_deceased(lang, expected):
     assert root_years(Person("jane", death=Event()), lang=lang) == expected
 
 
-@pytest.mark.parametrize("lang", [None, "de"])
-def test_a_death_year_without_a_birth_year_has_a_leading_en_dash(lang):
+@pytest.mark.parametrize("lang,expected", [(None, "–1891"), ("de", "† 1891")])
+def test_a_death_year_alone_follows_the_languages_died_only(lang, expected):
     assert (
         root_years(Person("jane", death=Event(Date("exact", Day(1891)))), lang=lang)
-        == "–1891"
+        == expected
     )
 
 
@@ -390,6 +390,20 @@ def test_a_language_mapping_overrides_year_words_and_falls_back_to_english():
     assert (
         root_years(person, lang={"years": {"about": "circa {y}"}}) == "chr circa 1852–"
     )
+
+
+def test_a_language_shapes_the_years_and_a_stand_in_alone_keeps_lifespan():
+    lang = {"years": {"lifespan": "{born} to {died}", "born_only": "b. {born}"}}
+    born = Person("jane", birth=Event(Date("exact", Day(1820))))
+    christened = Person("jane", christenings=[Event(Date("exact", Day(1852)))])
+    both = Person(
+        "jane",
+        birth=Event(Date("exact", Day(1820))),
+        death=Event(Date("exact", Day(1891))),
+    )
+    assert root_years(born, lang=lang) == "b. 1820"
+    assert root_years(christened, lang=lang) == "chr 1852 to "
+    assert root_years(both, lang=lang) == "1820 to 1891"
 
 
 def test_a_language_path_supplies_year_words(tmp_path):

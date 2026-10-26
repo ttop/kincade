@@ -165,6 +165,10 @@ before = "ant. {y}"
 after = "desp. {y}"
 between = "h. {y}"
 
+lifespan = "{born}–{died}"
+born_only = "{born}–"
+died_only = "–{died}"
+
 [sort]
 # The index order of Spanish lists (RAE, Ortografía, alfabetización de antropónimos). ñ
 # is a letter of its own, after n: "ñ" = "n~" files Muñoz after Muntaner and before
@@ -178,7 +182,9 @@ between = "h. {y}"
 # surnames, among the Ruiz M… entries.
 after_z = []
 ignore_particles = ["de", "del", "de la", "de las", "de los"]
-mc_as_mac = false
+keep_case_prefixes = ["Mc"]
 
 [sort.expand]
 "ñ" = "n~"
+
+[sort.surname_start]

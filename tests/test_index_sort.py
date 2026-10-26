@@ -1,5 +1,5 @@
 """Index sort order: the [sort] table of a language (expand, after_z, ignore_particles,
-mc_as_mac).
+surname_start), and the keep_case_prefixes of printed surnames.
 
 Synthetic names only. The index is built by build_index, so each order checked here is
 the order the PDF prints.
@@ -142,7 +142,8 @@ def test_english_defaults_are_the_empty_sort_rules():
         "expand": {},
         "after_z": [],
         "ignore_particles": [],
-        "mc_as_mac": False,
+        "surname_start": {},
+        "keep_case_prefixes": ["Mc"],
     }
 
 
@@ -296,7 +297,6 @@ def test_the_fold_of_a_spanish_enye_is_n_tilde():
             "expand": {"ñ": "n~"},
             "after_z": [],
             "ignore_particles": [],
-            "mc_as_mac": False,
         }
     )
     assert spanish.fold("Ñandú") == "n~andu"
@@ -426,7 +426,8 @@ def test_german_sort_settings_follow_din_5007_2():
     assert kincade.lang.load_strings("de")["sort"] == {
         "expand": {"ä": "ae", "ö": "oe", "ü": "ue"},
         "after_z": [],
-        "mc_as_mac": False,
+        "surname_start": {},
+        "keep_case_prefixes": ["Mc"],
         "ignore_particles": [
             "von",
             "zu",
@@ -695,26 +696,34 @@ def test_spanish_enye_sorts_after_n_through_expand(tmp_path):
     assert heads(people)[:3] == ["NIETO, Dani", "ÑOÑO, Fer", "NUEVO, Carla"]
 
 
-# ---------------------------------------------------------------- English: Mc as Mac
+# ---------------------------------------------------------------- surname starts and Mc
 
 
-def test_mc_as_mac_files_mc_names_as_if_they_began_mac(tmp_path):
-    people = [
-        ("Ida", "Lee"),
-        ("Ann", "MacDonald"),
-        ("Bob", "McClure"),
-        ("Eve", "McNair"),
-        ("Zed", "Nash"),
-    ]
-    mac = kincade.lang.load_strings(write_lang(tmp_path, "[sort]\nmc_as_mac = true\n"))
-    assert heads(people) == [
+MC_PEOPLE = [
+    ("Ida", "Lee"),
+    ("Ann", "MacDonald"),
+    ("Bob", "McClure"),
+    ("Eve", "McNair"),
+    ("Zed", "Nash"),
+]
+
+
+@pytest.mark.parametrize(
+    "body", ['[sort.surname_start]\nmc = "mac"\n', "[sort]\nmc_as_mac = true\n"]
+)
+def test_a_surname_start_files_mc_names_as_if_they_began_mac(tmp_path, body):
+    # mc_as_mac = true, the version 1.0 setting, is read as mc = "mac"
+    mac = kincade.lang.load_strings(write_lang(tmp_path, body))
+    assert mac["sort"]["surname_start"] == {"mc": "mac"}
+    assert heads(MC_PEOPLE) == [
         "LEE, Ida",
         "MACDONALD, Ann",
         "McCLURE, Bob",
         "McNAIR, Eve",
         "NASH, Zed",
     ]
-    assert heads(people, mac) == [
+    # the printed names do not change
+    assert heads(MC_PEOPLE, mac) == [
         "LEE, Ida",
         "McCLURE, Bob",
         "MACDONALD, Ann",
@@ -723,10 +732,54 @@ def test_mc_as_mac_files_mc_names_as_if_they_began_mac(tmp_path):
     ]
 
 
-def test_mc_as_mac_leaves_the_display_alone(tmp_path):
-    people = [("Bob", "McClure")]
-    mac = kincade.lang.load_strings(write_lang(tmp_path, "[sort]\nmc_as_mac = true\n"))
-    assert heads(people, mac) == ["McCLURE, Bob"]
+def test_a_surname_start_is_matched_after_particles_and_longest_first(tmp_path):
+    s = kincade.lang.load_strings(
+        write_lang(
+            tmp_path,
+            '[sort]\nignore_particles = ["van"]\n'
+            '[sort.surname_start]\nmc = "mac"\nmcc = "z"\n',
+        )
+    )
+    rules = kincade.lang.SortRules(s["sort"])
+    assert rules.fold("van McNair", surname=True) == "macnair"
+    assert rules.fold("McClure", surname=True) == "zlure"
+    assert rules.fold("McNair") == "mcnair"  # a given name is never changed
+
+
+def test_mc_as_mac_false_changes_nothing(tmp_path):
+    s = kincade.lang.load_strings(write_lang(tmp_path, "[sort]\nmc_as_mac = false\n"))
+    assert s["sort"] == kincade.lang.DEFAULT_STRINGS["sort"]
+
+
+@pytest.mark.parametrize(
+    "prefixes,surname,printed",
+    [
+        ('["Mc"]', "McClure", "McCLURE"),
+        ('["Mc"]', "Mcclure", "MCCLURE"),  # no capital after the prefix
+        ('["Mc"]', "MacDonald", "MACDONALD"),
+        ('["Mc", "Mac"]', "MacDonald", "MacDONALD"),
+        ('["Mc", "Mac"]', "Macy", "MACY"),
+        ("[]", "McClure", "MCCLURE"),
+    ],
+)
+def test_keep_case_prefixes_keep_their_case_in_capitals(
+    tmp_path, prefixes, surname, printed
+):
+    strings = kincade.lang.load_strings(
+        write_lang(tmp_path, f"[sort]\nkeep_case_prefixes = {prefixes}\n")
+    )
+    rules = kincade.lang.SortRules(strings["sort"])
+    assert kincade.lang.fmt_surname(surname, rules=rules) == printed
+    assert heads([("Ann", surname)], strings) == [f"{printed}, Ann"]
+
+
+def test_keep_case_prefixes_follow_the_particles(tmp_path):
+    strings = kincade.lang.load_strings(
+        write_lang(tmp_path, '[sort]\nignore_particles = ["van"]\n')
+    )
+    rules = kincade.lang.SortRules(strings["sort"])
+    assert kincade.lang.fmt_surname("van McNair", rules=rules) == "van McNAIR"
+    assert heads([("Eve", "van McNair")], strings) == ["McNAIR, Eve van"]
 
 
 # ----------------------------------------------------------------
@@ -737,14 +790,16 @@ def test_settings_are_casefolded_once_loaded(tmp_path):
     s = kincade.lang.load_strings(
         write_lang(
             tmp_path,
-            '[sort]\nafter_z = ["Å"]\nignore_particles = ["Van"]\n[sort.expand]\n"Ä" = "AE"\n',
+            '[sort]\nafter_z = ["Å"]\nignore_particles = ["Van"]\n[sort.expand]\n"Ä" = "AE"\n'
+            '[sort.surname_start]\nMc = "MAC"\n',
         )
     )
     assert s["sort"] == {
         "expand": {"ä": "ae"},
         "after_z": ["å"],
         "ignore_particles": ["van"],
-        "mc_as_mac": False,
+        "surname_start": {"mc": "mac"},
+        "keep_case_prefixes": ["Mc"],
     }
 
 
@@ -754,16 +809,17 @@ def test_expand_is_merged_with_the_language_table_and_lists_are_replaced():
     )
     assert s["sort"]["expand"] == {"ä": "ae", "ö": "oe", "ü": "ue", "ø": "oe"}
     assert s["sort"]["ignore_particles"] == ["van"]
-    assert s["sort"]["mc_as_mac"] is False  # the rest of the language's table stays
+    assert s["sort"]["keep_case_prefixes"] == ["Mc"]  # the rest of the table stays
 
 
 def test_a_language_file_can_give_only_the_sort_keys_it_changes(tmp_path):
-    s = kincade.lang.load_strings(write_lang(tmp_path, "[sort]\nmc_as_mac = true\n"))
+    s = kincade.lang.load_strings(write_lang(tmp_path, '[sort]\nafter_z = ["å"]\n'))
     assert s["sort"] == {
         "expand": {},
-        "after_z": [],
+        "after_z": ["å"],
         "ignore_particles": [],
-        "mc_as_mac": True,
+        "surname_start": {},
+        "keep_case_prefixes": ["Mc"],
     }
 
 
@@ -794,6 +850,13 @@ def test_a_language_file_can_give_only_the_sort_keys_it_changes(tmp_path):
         ('[sort]\nignore_particles = ["\'"]\n', "sort.ignore_particles"),
         ('[sort]\nmc_as_mac = "yes"\n', "sort.mc_as_mac"),
         ("[sort]\nmc_as_mac = 1\n", "sort.mc_as_mac"),  # a number is not true or false
+        ('[sort.surname_start]\n"m\'" = "mac"\n', "sort.surname_start"),  # punctuation
+        ('[sort.surname_start]\n" " = "mac"\n', "sort.surname_start"),
+        ("[sort.surname_start]\nmc = 1\n", "sort.surname_start"),
+        ('[sort]\nsurname_start = "mc"\n', "sort.surname_start"),
+        ('[sort]\nkeep_case_prefixes = "Mc"\n', "sort.keep_case_prefixes"),
+        ('[sort]\nkeep_case_prefixes = ["M c"]\n', "sort.keep_case_prefixes"),
+        ('[sort]\nkeep_case_prefixes = [""]\n', "sort.keep_case_prefixes"),
         ('sort = "none"\n', "sort"),
     ],
 )

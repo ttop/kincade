@@ -34,6 +34,7 @@ from .lang import (
     PLACEHOLDERS,
     KincadeWarning,
     LangError,
+    SortRules,
     display_name,
     expand_home,
     fill,
@@ -796,12 +797,14 @@ def person_line(
     *,
     living_name: str | None = "Living",
     preserve_case: bool = False,
+    rules: SortRules | None = None,
 ) -> str:
     """Record ID, name and years of a person, tab-separated. Living people's names
     use the localized placeholder and their years are omitted. IDs remain for root
     selection. living_name=None keeps names visible in the browser's local picker. With
     `standins`, a christening, burial or cremation gives a missing birth or death year,
-    as in the boxes (birth_source, death_source)."""
+    as in the boxes (birth_source, death_source). `rules` are the language's surname
+    settings (display_name)."""
     born, died = (
         year_of(birth_source(p, standins)[0].date),
         year_of(death_source(p, standins)[0].date),
@@ -811,7 +814,7 @@ def person_line(
     name = (
         living_name
         if hide and living_name is not None
-        else display_name(p, preserve_case)
+        else display_name(p, preserve_case, rules)
     )
     return f"{p.id}\t{name}\t{years}"
 
@@ -822,6 +825,7 @@ def _family_lines(
     living: Callable[[str | None], bool],
     strings: Mapping[str, Any],
     preserve_case: bool,
+    rules: SortRules,
 ) -> list[str]:
     """Indented spouse-family rows for --find, in FAMS then file order. Only actual
     partners are listed; a missing first FAMS never promotes a later default.
@@ -838,7 +842,7 @@ def _family_lines(
         name = (
             strings["living_name"]
             if living(spouse_id)
-            else display_name(spouse, preserve_case)
+            else display_name(spouse, preserve_case, rules)
             if spouse
             else ""
         )
@@ -904,6 +908,7 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
         found = find_people(tree, find)
         if not found:
             return _fail(f"no person matches {find!r}")
+        rules = SortRules(strings["sort"])
         for p in found:
             print(
                 person_line(
@@ -912,9 +917,12 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
                     standins,
                     living_name=strings["living_name"],
                     preserve_case=args.preserve_case,
+                    rules=rules,
                 )
             )
-            for line in _family_lines(tree, p, living, strings, args.preserve_case):
+            for line in _family_lines(
+                tree, p, living, strings, args.preserve_case, rules
+            ):
                 print(line)
         return 0
 
@@ -926,6 +934,7 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
         return _fail(f"no person matches {args.root!r}")
     if len(matches) > 1:
         _fail(f"{len(matches)} people match {args.root!r}; use a record ID:")
+        rules = SortRules(strings["sort"])
         for p in matches[:_CANDIDATES_SHOWN]:
             line = person_line(
                 p,
@@ -933,6 +942,7 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
                 standins,
                 living_name=strings["living_name"],
                 preserve_case=args.preserve_case,
+                rules=rules,
             )
             print(f"  {line}", file=sys.stderr)
         if len(matches) > _CANDIDATES_SHOWN:

@@ -180,6 +180,10 @@ before = "av. {y}"
 after = "apr. {y}"
 between = "v. {y}"
 
+lifespan = "{born}–{died}"
+born_only = "{born}–"
+died_only = "–{died}"
+
 [sort]
 # The index order of French lists (AFNOR NF Z44-061). Accents and ç sort as their base
 # letters, and the ligatures œ and æ as oe and ae, so Œuvray files with Oeuvray. The
@@ -191,8 +195,10 @@ between = "v. {y}"
 # space, so Saint-Exupéry files before Sainte-Beuve.
 after_z = []
 ignore_particles = ["de", "d’"]
-mc_as_mac = false
+keep_case_prefixes = ["Mc"]
 
 [sort.expand]
 "œ" = "oe"
 "æ" = "ae"
+
+[sort.surname_start]

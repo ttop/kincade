@@ -252,7 +252,7 @@ def test_a_death_year_without_a_birth_year_has_a_leading_en_dash(lang):
         ),
         (
             {"cremations": [Event(Date("before", Day(1871)))]},
-            ("–crem bef 1871", "–eingeäsch. vor 1871"),
+            ("–crem bef 1871", "–krem. vor 1871"),
         ),
         ({"christenings": [Event(Date("text", text="spring"))]}, ("", "")),
         ({"christenings": [Event(place="Doeville")]}, ("", "")),

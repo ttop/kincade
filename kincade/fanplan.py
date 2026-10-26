@@ -18,7 +18,14 @@ from .charts import (
     plan_charts,
 )
 from .fan import Fan, FanCell, full_name, ring_of
-from .lang import PLACEHOLDERS, fill, fmt_surname, format_date, load_strings
+from .lang import (
+    PLACEHOLDERS,
+    SortRules,
+    fill,
+    fmt_surname,
+    format_date,
+    load_strings,
+)
 from .model import Date, Day, Event, Person, Tree
 
 LINE_COLORS: dict[str, dict[str | int, str | None]] = {
@@ -153,6 +160,7 @@ def plan_fan(
             father, mother = tree.parent_ids(pid, prefer)
             seats.extend(((2 * slot, father), (2 * slot + 1, mother)))
     copies = Counter(pid for _, pid in seats if pid is not None)
+    rules = SortRules(strings["sort"])
     cells = []
     for slot, pid in seats:
         if pid is None:
@@ -165,7 +173,9 @@ def plan_fan(
                 slot,
                 title="" if hide else person.prefix,
                 given=strings["living_name"] if hide else person.given,
-                surname="" if hide else fmt_surname(person.surname, preserve_case),
+                surname=""
+                if hide
+                else fmt_surname(person.surname, preserve_case, rules),
                 suffix="" if hide else person.suffix,
                 years="" if hide else _years(person, event_standins, strings),
                 fill=_line_color(slot, ink),

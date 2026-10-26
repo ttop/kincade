@@ -249,7 +249,7 @@ def test_the_help_line_of_each_option(monkeypatch, capsys):
         "--show-ids show each person's record ID beside their name, on the charts and in the index",
         '--no-shorten-places cut a long place with "…" instead of first leaving out its country and middle parts',
         "--no-index leave out the name index page(s) at the end",
-        '-o, --output FILE PDF to write (default: "<root name> cascading pedigree.pdf"; with --fan: "<root name> fan chart.pdf"; with --blank: "Blank cascading pedigree.pdf")',
+        '-o, --output FILE PDF to write (default: named in the chart language, in English "<root name> cascading pedigree.pdf"; with --fan: "<root name> fan chart.pdf"; with --blank: "Blank cascading pedigree.pdf")',
         "--paper {letter,a4,tabloid,a3} paper size (default: letter); tabloid and a3 are for the fan chart",
         "--large-print use larger print and three generations per page",
         "--shadow draw a drop shadow under each box",
@@ -506,7 +506,7 @@ def test_generated_output_name_is_bounded_and_clean(tmp_path):
     assert pdf.name.endswith(" cascading pedigree.pdf")
     stem = pdf.name[: -len(" cascading pedigree.pdf")]
     assert 0 < len(stem) <= 100 and not any(ch in stem for ch in '\\/:*?"<>|\x01\x7f')
-    assert kincade.cli.default_output_name("..") == "pedigree cascading pedigree.pdf"
+    assert kincade.cli.default_output_name("..") == "cascading pedigree.pdf"
     assert (
         kincade.cli.default_output_name("Zoë/Wilks")
         == "Zoë_Wilks cascading pedigree.pdf"

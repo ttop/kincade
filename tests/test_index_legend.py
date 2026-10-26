@@ -18,7 +18,9 @@ from conftest import render
 from pdfread import count_pages, drawn, runs
 
 ENGLISH = "The numbers after each name indicate the chart number and box number. 6-1 is box 1 on chart 6."
-GERMAN = "Die Zahlen nach jedem Namen bedeuten Tafel-Nr.: 6-1 ist Nr. 1 auf Tafel 6."
+GERMAN = (
+    "Die Zahlen hinter jedem Namen nennen Tafel und Nummer: 6/1 ist Nr. 1 auf Tafel 6."
+)
 CONTINUATION = "Number 1 on this chart is the same as number 8 on chart 1."
 
 

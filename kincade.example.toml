@@ -100,8 +100,9 @@ preserve_case = false
 # a note after their name, such as "(adopted)".
 adoptive_parents = false
 
-# The language of the PDF text: a name such as "de" (a file in kincade/lang/, else in
-# ~/.config/kincade/lang/) or the path of a .toml file (default: English).
+# The language of the PDF text: a name such as "fr" (a file in kincade/lang/: de, en,
+# es, fr or it, else in ~/.config/kincade/lang/) or the path of a .toml file
+# (default: English).
 lang = "en"
 
 # The page size: "letter" or "a4" for the portrait pedigree; also "tabloid" or "a3"
@@ -124,6 +125,7 @@ ink = "color"
 # with no_footer = true.
 # footer = "Compiled by Jane Doe"
 
-# The PDF file to write (default: "<root name> cascading pedigree.pdf" in the folder you
-# run Kincade from; with fan = true: "<root name> fan chart.pdf").
+# The PDF file to write (default: named by the language's file_name in the folder you
+# run Kincade from, "<root name> cascading pedigree.pdf" in English; with fan = true:
+# "<root name> fan chart.pdf").
 # output = "jane.pdf"

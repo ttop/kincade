@@ -7,6 +7,9 @@ import shutil
 import subprocess
 import tomllib
 from pathlib import Path
+from typing import Any
+
+from kincade.lang import LANG_DIR, day_number, load_strings
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -76,6 +79,66 @@ def read_fonts() -> list[dict[str, str]]:
     return result
 
 
+def chart_languages() -> dict[str, dict[str, Any]]:
+    """For each bundled language, by its ISO 639-1 code, the wording the page shows as
+    the default title and footer of a chart in that language."""
+    languages = {}
+    for code in sorted(path.stem for path in LANG_DIR.glob("*.toml")):
+        strings = load_strings(code)
+        languages[code] = {
+            "title": strings["title"],
+            "metaTitle": strings["meta_title"],
+            "fanTitle": strings["fan_title"],
+            "footer": strings["footer"],
+            "dateFormat": strings["date_format"],
+            "days": [day_number(day, strings) for day in range(1, 32)],
+            "months": strings["months"]["short"],
+        }
+    return languages
+
+
+PLURAL_FORMS = {"zero", "one", "two", "few", "many", "other"}  # Unicode CLDR
+
+
+def _is_plural_message(value: object) -> bool:
+    return isinstance(value, dict) and "other" in value and set(value) <= PLURAL_FORMS
+
+
+def _flatten_messages(table: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+    """A table whose keys are all CLDR plural categories and include "other" is one
+    plural message; any other table is a section whose keys are joined with a dot."""
+    flat: dict[str, Any] = {}
+    for key, value in table.items():
+        name = f"{prefix}.{key}" if prefix else key
+        if _is_plural_message(value):
+            flat[name] = value
+        elif isinstance(value, dict):
+            flat.update(_flatten_messages(value, name))
+        else:
+            flat[name] = value
+    return flat
+
+
+def read_messages(languages: list[str]) -> dict[str, dict[str, Any]]:
+    """The page's own text, one flat table of dotted-key messages for each bundled
+    language, read from web/lang/<code>.toml."""
+    directory = WEB / "lang"
+    codes = sorted(path.stem for path in directory.glob("*.toml"))
+    if codes != list(languages):
+        raise SystemExit(
+            f"web/lang must have the bundled languages: {', '.join(languages)}"
+        )
+    messages: dict[str, dict[str, Any]] = {}
+    for code in codes:
+        path = directory / f"{code}.toml"
+        try:
+            parsed = tomllib.loads(path.read_text(encoding="utf-8"))
+        except tomllib.TOMLDecodeError as error:
+            raise SystemExit(f"Invalid {path.name}: {error}") from error
+        messages[code] = _flatten_messages(parsed)
+    return messages
+
+
 def inline_source(name: str) -> str:
     source = (WEB / name).read_text(encoding="utf-8")
     for token in ("</script", "<!--"):
@@ -100,6 +163,7 @@ def assemble_site(wheel: Path, destination: Path = SITE) -> dict[str, object]:
     if match is None:
         raise SystemExit(f"Invalid Kincade wheel filename: {wheel.name}")
     wheel_bytes = wheel.read_bytes()
+    languages = chart_languages()
     manifest: dict[str, object] = {
         "pyodide": {
             "version": PYODIDE_VERSION,
@@ -110,6 +174,8 @@ def assemble_site(wheel: Path, destination: Path = SITE) -> dict[str, object]:
         "fonts": read_fonts(),
         "kincade": match[1],
         "sample": {"name": SAMPLE.name, "text": SAMPLE.read_text(encoding="utf-8")},
+        "languages": languages,
+        "messages": read_messages(list(languages)),
     }
     slots = {
         '<script id="manifest" type="application/json"></script>': json.dumps(

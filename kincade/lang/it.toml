@@ -8,9 +8,9 @@
 #
 # Wording follows Italian genealogical usage: "Albero degli antenati" for a pedigree
 # chart, "tavola" for each sheet, n./matr./m. (nascita, matrimonio, morte) for
-# born/married/died, "a" before a place, ca. (circa) for approximate dates and ante and
-# post for before and after, lower-case month abbreviations, 1º for the first of the
-# month, and words that do not change with a person's sex.
+# born/married/died, the place bare on its own line, ca. (circa) for approximate dates
+# and ante and post for before and after, lower-case month abbreviations, 1º for the
+# first of the month, and words that do not change with a person's sex.
 
 # Base pedigree title. --title overrides the printed heading.
 title = "Albero degli antenati"
@@ -33,8 +33,6 @@ footer_blank = "Creato con Kincade"
 # Full date for the footer and for GEDCOM dates with a day: "3 mar. 1903".
 date_format = "{day} {month} {year}"
 
-# The first of the month: "1º mar. 1903".
-day_one = "1º"
 
 # Chart label, top right.
 chart_label = "Tavola {n}"
@@ -57,17 +55,29 @@ page_number = "Pagina {page} di {pages}"
 # type, so keep it short.
 record_id = "[{id}]"
 
+# The names of the saved PDFs, before .pdf. {name} is the root person's name.
+file_name = "{name} albero degli antenati"
+fan_file_name = "{name} albero a ventaglio"
+blank_file_name = "Albero degli antenati da compilare"
+
 [months]
 # January first, each abbreviation with a period.
 short = ["gen.", "feb.", "mar.", "apr.", "mag.", "giu.", "lug.", "ago.", "set.", "ott.", "nov.", "dic."]
+
+[days]
+# The first of the month is 1º (1º mar. 1903); other days are numbers.
+1 = "1º"
 
 [index]
 # Title of the name index pages.
 title = "Indice dei nomi"
 
 # One line under the title of the first index page: how to read the numbers after each
-# name (tavola-numero: 6-1 is box 1 on tavola 6). An empty string leaves it off.
-legend = "I numeri dopo ogni nome indicano la tavola e il numero: 6-1 è il n. 1 della tavola 6."
+# name (tavola-posizione: 6-1 is box 1 on tavola 6). An empty string leaves it off.
+legend = "I numeri dopo ogni nome indicano la tavola e la posizione nella tavola: 6-1 è il n. 1 della tavola 6."
+
+# Where a person is drawn: tavola-posizione.
+reference = "{chart}-{pos}"
 
 # Birth-year piece of an index entry: n. = nascita.
 born = "n. {birth}"
@@ -92,30 +102,31 @@ cremated = "crem. {death}"
 # Relationship note from Tree.parent_relationship, in either parents mode.
 # Uses available non-step parents, or the link's non-step relationships when
 # neither parent is available. Birth and other relationships give no note. Nouns,
-# so the note is the same for a son or a daughter: adozione, affido (foster care).
-adopted = "(adozione)"
-foster = "(affido)"
+# so the note is the same for a son or a daughter: per adozione, in affido (foster care).
+adopted = "(per adozione)"
+foster = "(in affido)"
 
 [labels]
 # Partner paired with the initial pedigree root's marriage.
 spouse = "coniuge:"
-# Box labels, before each value: nascita, matrimonio, morte; each place line reads
-# "a …".
+# Box labels, before each value: nascita, matrimonio, morte. A place stands bare on its
+# line ("Firenze, Toscana"): "a" fits a town but not a region or a country ("in
+# Toscana", "negli Stati Uniti"), so the place labels are empty.
 birth = "n."
-birth_place = "a"
+birth_place = ""
 marriage = "matr."
-marriage_place = "a"
+marriage_place = ""
 death = "m."
-death_place = "a"
+death_place = ""
 
 # Stand-ins for a missing birth or death: battesimo (christening or baptism), sepoltura
 # (burial), cremazione.
 christening = "batt."
-christening_place = "a"
+christening_place = ""
 burial = "sep."
-burial_place = "a"
+burial_place = ""
 cremation = "crem."
-cremation_place = "a"
+cremation_place = ""
 
 [dates]
 # ABT → ca. (circa), EST → stim. (stimata), CAL → calc. (calcolata). ante and post, as
@@ -131,6 +142,23 @@ to = "fino al"
 # Between the two dates of a range: 1622–1632.
 range = "–"
 
+[dates.with_day]
+# dal and fino al read the same before a day: "dal 3 mar. 1910".
+
+[dates.rewrite]
+# dal and fino al elide before a vowel: the days 8 (otto) and 11 (undici), and the
+# months aprile, agosto and ottobre: "dall’8 mar. 1910", "fino all’apr. 1980".
+"dal 8" = "dall’8"
+"dal 11" = "dall’11"
+"dal apr." = "dall’apr."
+"dal ago." = "dall’ago."
+"dal ott." = "dall’ott."
+"fino al 8" = "fino all’8"
+"fino al 11" = "fino all’11"
+"fino al apr." = "fino all’apr."
+"fino al ago." = "fino all’ago."
+"fino al ott." = "fino all’ott."
+
 [years]
 # Fan stand-ins use the box labels: battesimo, sepoltura and cremazione.
 # {y} is the year with any short date word.
@@ -141,13 +169,13 @@ cremation = "crem. {y}"
 # A death without a readable year: † is the same for anyone, as deceduto is not.
 deceased = "†"
 
-# Short fan year words: ca. (approximate, estimated or calculated), ante (before or TO),
-# post (after or FROM), tra (before a range's first year).
-# {y} is the year, including both readings of a double year.
+# Short fan year words: ca. (approximate, estimated or calculated, and the first year
+# of a range, where tra would need a second term), ante (before or TO), post (after or
+# FROM). {y} is the year, including both readings of a double year.
 about = "ca. {y}"
 before = "ante {y}"
 after = "post {y}"
-between = "tra {y}"
+between = "ca. {y}"
 
 [sort]
 # The index order of Italian lists. The printed names do not change. Accents sort as

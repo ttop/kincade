@@ -146,7 +146,7 @@ def test_single_person_file_requires_affirmative_selection(app, source):
           document.querySelector('#drop-zone').dispatchEvent(
             new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: d}));
         }""")
-    expect(app.page.locator("#file-summary")).to_have_text("single.ged: 1 people")
+    expect(app.page.locator("#file-summary")).to_have_text("single.ged: 1 person")
     expect(app.page.locator("#result-summary")).to_have_text("1 match")
     expect(app.page.locator("#root-summary")).to_have_text("Choose a root person.")
     assert not app.sent("render")
@@ -195,7 +195,7 @@ def test_upload_drop_search_keyboard_and_explicit_selection(app):
       if (!z.classList.contains('dragging')) throw Error('No drag highlight');
       z.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: d}));
     }""")
-    expect(app.page.locator("#file-summary")).to_have_text("drop.ged: 1 people")
+    expect(app.page.locator("#file-summary")).to_have_text("drop.ged: 1 person")
     expect(app.page.locator("#drop-zone")).not_to_have_class(re.compile(".*dragging.*"))
     expect(app.page.locator("#result-summary")).to_have_text("1 match")
     app.select("D1")
@@ -557,6 +557,7 @@ def test_every_default_mapping_and_reset_titles_footers(app):
         "page_numbers": True,
         "index": True,
         "footer": None,
+        "lang": "en",
     }
     app.page.locator("#more-options summary").click()
     expect(app.page.locator("#preserve-case")).to_be_checked()
@@ -583,6 +584,7 @@ def test_every_default_mapping_and_reset_titles_footers(app):
         "preserve_case": False,
         "title": None,
         "footer": None,
+        "lang": "en",
     }
     app.change("#footer", "Shared footer")
     app.change("#no-footer", True)

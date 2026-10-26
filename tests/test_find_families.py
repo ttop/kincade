@@ -267,8 +267,10 @@ def test_find_privacy_hides_living_spouse_identity_and_either_partners_marriage(
     rows = find(
         path, capsys, "R", "--exclude-private", "--preserve-case", "--lang", "de"
     )
-    assert rows[0] == ("R\tLebend\t" if root_living else "R\tRoot vanDyke\t1700-")
-    spouse = "Lebend" if spouse_living else "Spouse deVries"
+    assert rows[0] == (
+        "R\tLebende Person\t" if root_living else "R\tRoot vanDyke\t1700-"
+    )
+    spouse = "Lebende Person" if spouse_living else "Spouse deVries"
     if root_living or spouse_living:
         assert rows[1] == f"    F1\t{spouse}\t(default)"
         assert all("2021" not in row and "Private Town" not in row for row in rows)

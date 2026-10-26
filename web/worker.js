@@ -3,19 +3,31 @@
 let pyodide = null;
 let dispatchPython = null;
 let queue = Promise.resolve();
-let step = "Loading Pyodide";
-let host = "jsDelivr";
+// Steps and hosts are codes; the page words them in its language.
+let step = "pyodide";
+let host = "jsdelivr";
 
-function status(text, source) {
-  step = text;
-  host = source;
-  self.postMessage({type: "status", text});
+function status(stepCode, hostCode) {
+  step = stepCode;
+  host = hostCode;
+  self.postMessage({type: "status", step});
+}
+
+// An error the page words from `code` and `params`; `message` is the English text.
+function pageError(code, params, message) {
+  const error = new Error(message);
+  error.code = code;
+  error.params = params;
+  return error;
 }
 
 async function fetchBytes(url) {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Download failed: HTTP ${response.status} for ${url}`);
+    throw pageError(
+      "download", {status: response.status, url},
+      `Download failed: HTTP ${response.status} for ${url}`,
+    );
   }
   return new Uint8Array(await response.arrayBuffer());
 }
@@ -46,28 +58,29 @@ await micropip.install(_web_requirement)
 }
 
 async function initialize({manifest, glue, wheelUrl}) {
-  status("Loading Pyodide", "jsDelivr");
+  status("pyodide", "jsdelivr");
   const {loadPyodide} = await import(`${manifest.pyodide.base}pyodide.mjs`);
   pyodide = await loadPyodide({indexURL: manifest.pyodide.base});
 
-  status("Loading micropip", "jsDelivr");
+  status("micropip", "jsdelivr");
   await pyodide.loadPackage("micropip");
 
-  status("Installing reportlab", "PyPI (reportlab), jsDelivr (Pillow, charset-normalizer)");
+  status("reportlab", "pypi");
   await install(manifest.reportlab);
 
-  status("Installing Kincade", "this site");
+  status("kincade", "site");
   const wheel = await fetchBytes(`${wheelUrl}?v=${manifest.wheel.sha256.slice(0, 12)}`);
   const wheelPath = `/tmp/${manifest.wheel.name}`;
   pyodide.FS.writeFile(wheelPath, wheel);
   if (sha256(wheel) !== manifest.wheel.sha256) {
-    throw new Error(
-      "The HTML and Kincade wheel may be from different cached builds. Reload the page to download matching files."
+    throw pageError(
+      "wheelMismatch", {},
+      "The HTML and Kincade wheel may be from different cached builds. Reload the page to download matching files.",
     );
   }
   await install(`emfs:${wheelPath}`);
 
-  status("Loading fonts", "jsDelivr");
+  status("fonts", "jsdelivr");
   pyodide.FS.mkdirTree("/fonts");
   for (const font of manifest.fonts) {
     try {
@@ -80,7 +93,7 @@ async function initialize({manifest, glue, wheelUrl}) {
     }
   }
 
-  status("Starting Kincade", "—");
+  status("start", "none");
   pyodide.runPython(glue);
   pyodide.runPython(`
 import json
@@ -113,7 +126,8 @@ def _web_dispatch(request_json, data):
                 request["rootId"], request["adoptiveParents"], request["largePrint"]
             )
             families = _web_session.root_families(
-                request["rootId"], request["excludePrivate"], request["preserveCase"]
+                request["rootId"], request["excludePrivate"], request["preserveCase"],
+                request["lang"],
             )
             return {
                 "type": "root-metadata", "seq": request["seq"],
@@ -121,7 +135,8 @@ def _web_dispatch(request_json, data):
                 "adoptiveParents": request["adoptiveParents"],
                 "largePrint": request["largePrint"], "depth": depth,
                 "excludePrivate": request["excludePrivate"],
-                "preserveCase": request["preserveCase"], "families": families,
+                "preserveCase": request["preserveCase"], "lang": request["lang"],
+                "families": families,
             }
         if operation == "render":
             pdf, filename, summary = _web_session.render(
@@ -134,10 +149,13 @@ def _web_dispatch(request_json, data):
             }
         raise ValueError(f"Unknown request {operation!r}")
     except Exception as error:
+        # The page words a coded error, and an unexpected one by its operation; a
+        # plain ValueError keeps its own message.
         reply = {
             "type": "error", "request": operation,
             "message": str(error) if isinstance(error, ValueError)
                 else f"Unable to {operation} the family tree.",
+            "code": getattr(error, "code", None),
             "details": "" if isinstance(error, ValueError) else traceback.format_exc(),
         }
         if operation in ("search", "render", "root-metadata"):
@@ -155,7 +173,7 @@ async function dispatch(request) {
     return;
   }
   if (!dispatchPython) {
-    throw new Error("Kincade is not ready. Reload the page and try again.");
+    throw pageError("notReady", {}, "Kincade is not ready. Reload the page and try again.");
   }
 
   // JSON preserves plain settings (including null and booleans) as a Python dict.
@@ -182,13 +200,15 @@ async function dispatch(request) {
 }
 
 function failed(request, error) {
+  const message = String(error.message || error);
+  const coded = {code: error.code ?? null, params: error.params ?? {}};
   if (request.type === "init") {
-    self.postMessage({type: "failed", step, host, message: String(error.message || error)});
+    self.postMessage({type: "failed", step, host, message, ...coded});
     return;
   }
   const reply = {
-    type: "error", request: request.type,
-    message: String(error.message || error), details: String(error.stack || ""),
+    type: "error", request: request.type, message, ...coded,
+    details: error.code ? "" : String(error.stack || ""),
   };
   if (request.type === "search" || request.type === "render" || request.type === "root-metadata") {
     reply.seq = request.seq;

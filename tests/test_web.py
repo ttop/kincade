@@ -4,6 +4,8 @@ import importlib.util
 import inspect
 import json
 import re
+import shutil
+import tomllib
 from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
@@ -13,11 +15,12 @@ import pytest
 from reportlab import rl_config
 
 from kincade import FanOptions, Options, plan_fan, render_fan
+from kincade.lang import load_strings
 from kincade.pdf import BASE14, FONT_FILES, render_with_counts
 
 import kincade_web
 from conftest import FIX, ROOT
-from kincade_web import PAGE_OPTIONS, Session
+from kincade_web import LANGUAGES, PAGE_OPTIONS, Session
 from pdfread import count_pages
 
 
@@ -74,6 +77,7 @@ PAGE_DEFAULTS = {
         "preserve_case": False,
         "shadow": False,
         "root_family": None,
+        "lang": "en",
     },
     "fan": {
         "generations": 6,
@@ -85,6 +89,7 @@ PAGE_DEFAULTS = {
         "paper": "letter",
         "title": None,
         "footer": None,
+        "lang": "en",
     },
 }
 
@@ -95,13 +100,13 @@ PAGE_DEFAULTS = {
         (
             "pedigree",
             "Jane ASHFORD cascading pedigree.pdf",
-            "6 charts, 1 index page, 7 pages",
+            {"charts": 6, "indexPages": 1, "pages": 7},
             7,
         ),
         (
             "fan",
             "Jane ASHFORD fan chart.pdf",
-            "fan chart, 6 generations, 23 people",
+            {"generations": 6, "people": 23},
             1,
         ),
     ],
@@ -224,7 +229,7 @@ def test_each_fan_ink_matches_planning_and_drawing(session, monkeypatch):
         )
         assert actual == expected
         assert filename == "Jane ASHFORD fan chart.pdf"
-        assert summary == "fan chart, 6 generations, 23 people"
+        assert summary == {"generations": 6, "people": 23}
         pdfs.append(actual)
     assert len(set(pdfs)) == 3
 
@@ -291,11 +296,11 @@ def test_pedigree_accepts_valid_generations(session, value):
 def test_fan_accepts_its_generation_range(session, value):
     pdf, _filename, summary = session.render("I1", "fan", {"generations": value})
     assert count_pages(pdf) == 1
-    assert summary.startswith(f"fan chart, {value} generations, ")
+    assert summary["generations"] == value
 
 
 def test_option_sets_match_both_library_interfaces():
-    excluded = {"lang", "today", "compress", "fonts"}
+    excluded = {"today", "compress", "fonts"}
     pedigree_fields = {field.name for field in dataclasses.fields(Options)}
     fan_fields = {field.name for field in dataclasses.fields(FanOptions)}
     planner_keywords = {
@@ -317,6 +322,7 @@ def test_option_sets_match_both_library_interfaces():
         "paper",
         "title",
         "footer",
+        "lang",
     }
 
 
@@ -453,6 +459,7 @@ def test_page_option_mapping_for_both_charts():
             ("footer", both): 2,
             ("page_numbers", pedigree): 1,
             ("index", pedigree): 1,
+            ("lang", both): 1,
         }
     )
     actual = Counter()
@@ -542,6 +549,9 @@ def test_page_html_defaults_labels_and_disclosure():
             ("a3", False),
         ],
         "ink": [("color", True), ("grayscale", False), ("bw", False)],
+        # English, the default, then the other bundled languages
+        "page-lang": [("en", True)],
+        "chart-lang": [("en", True)],
     }
     for chart, expected in PAGE_DEFAULTS.items():
         actual = {}
@@ -630,8 +640,8 @@ def test_page_html_has_exact_empty_build_insertion_points():
         assert re.search(rf'<script[^>]*id="{attrs["id"]}"[^>]*></script>', source)
 
 
-@pytest.fixture
-def build_module():
+def _load_build_module():
+    # Loaded by path, not `import build`, to avoid shadowing PyPA's `build` package.
     path = WEB / "build.py"
     assert path.is_file(), "the site build is not implemented"
     spec = importlib.util.spec_from_file_location("kincade_web_build", path)
@@ -639,6 +649,11 @@ def build_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture
+def build_module():
+    return _load_build_module()
 
 
 @pytest.fixture
@@ -652,8 +667,15 @@ def stand_in_wheel(tmp_path):
 def build_inputs(build_module, tmp_path, monkeypatch):
     web = tmp_path / "web"
     web.mkdir()
-    for name in ("index.html", "app.js", "worker.js", "kincade_web.py", "fonts.json"):
+    for name in (
+        "index.html",
+        "app.js",
+        "worker.js",
+        "kincade_web.py",
+        "fonts.json",
+    ):
         (web / name).write_bytes((WEB / name).read_bytes())
+    shutil.copytree(WEB / "lang", web / "lang")
     monkeypatch.setattr(build_module, "WEB", web)
     return web
 
@@ -708,6 +730,19 @@ def test_assemble_site_inlines_manifest_and_sources_into_exactly_two_files(
         "fonts",
         "kincade",
         "sample",
+        "languages",
+        "messages",
+    }
+    assert manifest["messages"] == build_module.read_messages(list(LANGUAGES))
+    assert list(manifest["languages"]) == list(LANGUAGES)
+    assert manifest["languages"]["fr"] == {
+        "title": "Arbre d’ascendance",
+        "metaTitle": "{title} — {name}",
+        "fanTitle": "{name} — Arbre en éventail",
+        "footer": "Créé le {date} avec Kincade",
+        "dateFormat": "{day} {month} {year}",
+        "days": ["1er", *(str(day) for day in range(2, 32))],
+        "months": load_strings("fr")["months"]["short"],
     }
     assert manifest["pyodide"] == {
         "version": "314.0.7",
@@ -757,7 +792,7 @@ def test_assembled_bootstrap_supports_the_pinned_module_worker_runtime(
     )
     module_loader = re.search(
         r"async function initialize\([^)]*\)\s*\{\s*"
-        r'status\("Loading Pyodide", "jsDelivr"\);\s*'
+        r'status\("pyodide", "jsdelivr"\);\s*'
         r"const\s+\{loadPyodide\}\s*=\s*await import\("
         r"`\$\{manifest\.pyodide\.base\}pyodide\.mjs`\);\s*"
         r"pyodide\s*=\s*await loadPyodide\("
@@ -1094,12 +1129,36 @@ def test_root_family_choices_pair_spouses_and_marriages_in_recorded_order(
 ):
     choices = marriage_session.root_families("I1")
     assert choices == [
-        {"id": "F1", "label": "F1 · First McCLURE · m. 1901 · mp. Firsttown"},
-        {"id": "F2", "label": "F2 · Second DEWITT · m. 1922 · mp. Secondtown"},
+        {
+            "id": "F1",
+            "spouse": "First McCLURE",
+            "details": ["m. 1901", "mp. Firsttown"],
+        },
+        {
+            "id": "F2",
+            "spouse": "Second DEWITT",
+            "details": ["m. 1922", "mp. Secondtown"],
+        },
     ]
     assert marriage_session.root_families("I2", preserve_case=True) == [
-        {"id": "F1", "label": "F1 · Root Ashford · m. 1901 · mp. Firsttown"}
+        {"id": "F1", "spouse": "Root Ashford", "details": ["m. 1901", "mp. Firsttown"]}
     ]
+
+
+def test_root_family_choices_are_worded_in_the_requested_language(marriage_session):
+    assert marriage_session.root_families("I1", lang="fr")[0] == {
+        "id": "F1",
+        "spouse": "First McCLURE",
+        "details": ["mar. 1901", "à Firsttown"],
+    }
+    marriage_session.tree.people["I3"].living = True
+    assert marriage_session.root_families("I1", exclude_private=True, lang="it")[1] == {
+        "id": "F2",
+        "spouse": "Persona vivente",
+        "details": [],
+    }
+    with pytest.raises(ValueError, match="Unknown language"):
+        marriage_session.root_families("I1", lang="../x.toml")
 
 
 @pytest.mark.parametrize("living", ["I1", "I3"])
@@ -1111,11 +1170,13 @@ def test_root_family_choices_hide_marriage_for_either_living_partner(
     choices = marriage_session.root_families("I1", exclude_private=True)
     assert choices[1] == {
         "id": "F2",
-        "label": "F2 · Living" if living == "I3" else "F2 · Second DEWITT",
+        "spouse": "Living" if living == "I3" else "Second DEWITT",
+        "details": [],
     }
-    assert marriage_session.root_families("I1")[1]["label"] == (
-        "F2 · Second DEWITT · m. 1922 · mp. Secondtown"
-    )
+    assert marriage_session.root_families("I1")[1]["details"] == [
+        "m. 1922",
+        "mp. Secondtown",
+    ]
 
 
 def test_root_family_choices_handle_missing_links_without_changing_default(
@@ -1128,8 +1189,12 @@ def test_root_family_choices_handle_missing_links_without_changing_default(
     tree.families["F2"].marriage = None
     tree.families["unrelated"] = type(tree.families["F1"])("unrelated", "I2", "I3")
     assert marriage_session.root_families("I1") == [
-        {"id": "F1", "label": "F1 · First McCLURE · m. 1901 · mp. Firsttown"},
-        {"id": "F2", "label": "F2 · Unknown spouse"},
+        {
+            "id": "F1",
+            "spouse": "First McCLURE",
+            "details": ["m. 1901", "mp. Firsttown"],
+        },
+        {"id": "F2", "spouse": "", "details": []},
     ]
     assert root.families[0] == "missing"
     assert marriage_session.root_families("I3")[-1]["id"] == "unrelated"
@@ -1161,3 +1226,131 @@ def test_browser_render_root_family_override_matches_real_options(
         marriage_session.render("I1", "fan", {"root_family": "F2"})
     with pytest.raises(ValueError):
         marriage_session.render("I2", "pedigree", {"root_family": "F2"})
+
+
+# ---------------------------------------------------------------- the page's languages
+
+
+MESSAGES = _load_build_module().read_messages(list(LANGUAGES))
+
+
+def placeholders(text):
+    return set(re.findall(r"\{(\w+)\}", text))
+
+
+PLURAL_FORMS = {"zero", "one", "two", "few", "many", "other"}  # Unicode CLDR
+
+
+def test_the_page_has_one_message_table_for_each_bundled_language():
+    assert sorted(MESSAGES) == list(LANGUAGES) == ["de", "en", "es", "fr", "it"]
+
+
+def test_each_web_lang_file_parses_and_flattens_to_the_same_keys_as_english(
+    build_module,
+):
+    for code in LANGUAGES:
+        parsed = tomllib.loads(
+            (WEB / "lang" / f"{code}.toml").read_text(encoding="utf-8")
+        )
+        assert set(build_module._flatten_messages(parsed)) == set(MESSAGES["en"])
+
+
+def test_read_messages_refuses_invalid_toml(build_module, tmp_path, monkeypatch):
+    lang = tmp_path / "lang"
+    lang.mkdir()
+    (lang / "en.toml").write_text("not valid [[[ toml", encoding="utf-8")
+    monkeypatch.setattr(build_module, "WEB", tmp_path)
+    with pytest.raises(SystemExit, match=r"Invalid en\.toml"):
+        build_module.read_messages(["en"])
+
+
+def test_read_messages_refuses_a_language_code_mismatch(
+    build_module, tmp_path, monkeypatch
+):
+    lang = tmp_path / "lang"
+    lang.mkdir()
+    (lang / "en.toml").write_text('[page]\ntitle = "Kincade"\n', encoding="utf-8")
+    monkeypatch.setattr(build_module, "WEB", tmp_path)
+    with pytest.raises(SystemExit, match="web/lang must have the bundled languages"):
+        build_module.read_messages(["de", "en"])
+
+
+@pytest.mark.parametrize("lang", [code for code in LANGUAGES if code != "en"])
+def test_each_language_words_every_message_with_the_same_placeholders(lang):
+    english, messages = MESSAGES["en"], MESSAGES[lang]
+    assert set(messages) == set(english)
+    for key, text in english.items():
+        if isinstance(text, dict):
+            # plural forms, chosen by {count} or by the number the message counts: the
+            # language's own Intl.PluralRules categories, falling back to other
+            assert "other" in messages[key] and set(messages[key]) <= PLURAL_FORMS, key
+            for form in text.values():
+                for translated in messages[key].values():
+                    assert placeholders(translated) == placeholders(form), key
+        else:
+            assert isinstance(messages[key], str), key
+            assert placeholders(messages[key]) == placeholders(text), key
+
+
+def message_keys_the_page_names():
+    """Every message key the page's markup and scripts name, as written or built from
+    the codes the worker and the Python glue send."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    worker = (WEB / "worker.js").read_text(encoding="utf-8")
+    glue = (WEB / "kincade_web.py").read_text(encoding="utf-8")
+    keys = set(re.findall(r'data-i18n(?:-[\w-]+)?="([\w.]+)"', html))
+    keys |= set(re.findall(r'\bt\("([\w.]+)"', app))
+    keys |= set(re.findall(r'"((?:error|family|root|options)\.\w+)"', app))
+    keys |= set(re.findall(r'\["(\w+\.\w+)"\]', app))
+    keys |= {f"step.{code}" for code in re.findall(r'status\("(\w+)"', worker)}
+    keys |= {f"error.{code}" for code in re.findall(r'pageError\(\s*"(\w+)"', worker)}
+    keys |= {f"error.{code}" for code in re.findall(r'PageError\("(\w+)"', glue)}
+    return keys
+
+
+def test_every_message_the_page_names_exists_and_every_message_is_named():
+    named = message_keys_the_page_names()
+    assert {"step.pyodide", "step.start", "error.download", "error.noPeople"} <= named
+    assert named == set(MESSAGES["en"])
+    worker = (WEB / "worker.js").read_text(encoding="utf-8")
+    hosts = set(re.findall(r'status\("\w+", "(\w+)"\)', worker))
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    host_names = re.search(r"const hostNames = \{(.*?)\};", app, re.DOTALL)[1]
+    assert hosts | {"browser"} == set(re.findall(r"(\w+): \(\) =>", host_names))
+
+
+def test_each_language_names_itself_for_the_language_choices():
+    names = [MESSAGES[code]["page.languageName"] for code in LANGUAGES]
+    assert all(name.strip() for name in names) and len(set(names)) == len(names)
+
+
+def test_the_chart_language_words_the_pdf_and_the_living_root_file_name(
+    session, monkeypatch
+):
+    monkeypatch.setattr(rl_config, "invariant", True)
+    session.tree.people["I1"].living = True
+    settings = {"lang": "fr", "exclude_private": True}
+    pdf, filename, _summary = session.render("I1", "pedigree", settings)
+    assert filename == "Arbre d'ascendance Personne vivante.pdf"
+    assert (
+        pdf
+        == render_with_counts(
+            session.tree, "I1", Options(**settings, fonts=session.fonts)
+        ).pdf
+    )
+    assert pdf != session.render("I1", "pedigree", {"exclude_private": True})[0]
+    settings = {"lang": "it", "exclude_private": True}
+    fan, fan_name, _summary = session.render("I1", "fan", settings)
+    assert fan_name == "Persona vivente albero a ventaglio.pdf"
+    assert fan == render_fan(
+        plan_fan(session.tree, "I1", **settings),
+        FanOptions(lang="it", fonts=session.fonts),
+    )
+
+
+@pytest.mark.parametrize("chart", ["pedigree", "fan"])
+@pytest.mark.parametrize("lang", ["xx", "../en.toml", "/tmp/x.toml", None, 3])
+def test_only_a_bundled_chart_language_is_accepted(session, chart, lang):
+    with pytest.raises(ValueError, match="Unknown language"):
+        session.render("I1", chart, {"lang": lang})

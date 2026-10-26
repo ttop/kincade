@@ -24,10 +24,11 @@ web/site/
 ```
 
 Here, `<version>` is the package version. The manifest records the wheel's filename
-and SHA-256. The build itself needs uv and network access only if `uv build` must
-fetch its build backend. Setting up uv's project environment for the first time
-can also need network access to install the locked dependencies. Building does
-not fetch Pyodide, reportlab's browser wheel or the fonts.
+and SHA-256, and carries the page wording from `web/lang/*.toml` and the chart
+wording the page shows. The build itself needs uv and network access only if
+`uv build` must fetch its build backend. Setting up uv's project environment for
+the first time can also need network access to install the locked dependencies.
+Building does not fetch Pyodide, reportlab's browser wheel or the fonts.
 
 ## Copy to another site
 
@@ -63,6 +64,17 @@ Font License 1.1. The page checks their hashes before registering them. If any
 font is unavailable or does not match, it uses the built-in PDF fonts and names
 that fallback in the PDF summary. Those fonts cover Windows-1252; other
 characters lose accents or become `?`.
+
+## Page languages
+
+The page speaks every language bundled in `kincade/lang/`, by the file's ISO 639-1
+code. A language has two files: its chart wording in `kincade/lang/<code>.toml` and
+its page wording in `web/lang/<code>.toml`, with the same keys and placeholders as
+`web/lang/en.toml`. Adding a language needs only those two files, no edits to
+`web/index.html` or `web/app.js`: the page builds both the header's language select
+and Chart language from the manifest's bundled languages, each option named in its
+own language. The build stops when the `web/lang` codes and the chart language files
+differ, and `tests/test_web.py` checks the keys, placeholders and select options.
 
 ## Update dependencies
 

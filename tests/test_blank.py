@@ -290,7 +290,7 @@ def test_a_german_blank_chart(large_print):
         text["geb."] == boxes_ and text["gest."] == boxes_ and text["verh."] == married
     )
     # the place line of each date line reads "in"
-    assert text["Partner:"] == 1
+    assert text["Ehe mit:"] == 1
     assert text["in"] == 2 * boxes_ + married
     assert text["Ahnentafel"] == 1 and text["Erstellt mit Kincade"] == 1
     for absent in ("Tafel", "Seite", "Fortsetzung", "Created"):

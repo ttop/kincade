@@ -5,6 +5,7 @@ Synthetic names only. The index is built by build_index, so each order checked h
 the order the PDF prints.
 """
 
+import re
 import unicodedata
 
 import pytest
@@ -46,8 +47,12 @@ def index_entries(people, strings=None):
 
 
 def heads(people, strings=None):
-    """'SURNAME, Given' for each entry, in index order."""
-    return [e.split(" (")[0].split(", 1-")[0] for e in index_entries(people, strings)]
+    """'SURNAME, Given' for each entry, in index order: without years or references
+    (1-2 in English, 1/2 in German)."""
+    return [
+        re.sub(r"(, \d+[-/]\d+)+$", "", e.split(" (")[0])
+        for e in index_entries(people, strings)
+    ]
 
 
 def givens(people, strings=None):
@@ -178,8 +183,9 @@ def test_punctuation_is_dropped_from_the_sort_key_but_not_from_the_text():
     assert rules.fold("O'Brien", surname=True) == "obrien"
     assert rules.fold("St. John", surname=True) == "st john"
     assert rules.fold("[HARTLEY] DAWSON", surname=True) == "hartley dawson"
-    # a hyphen joins the two parts, it does not separate them
-    assert rules.fold("Jean-Paul") == "jeanpaul"
+    # a hyphen or dash parts words, so a name files word by word
+    assert rules.fold("Jean-Paul") == "jean paul"
+    assert rules.fold("Saint\u2013Exupéry", surname=True) == "saint exupery"
     assert rules.fold("  St.   John  ") == "st john"  # spaces collapse and are trimmed
     people = [("Pat", "O'Brien"), ("Lee", "St. John")]
     assert [e.split(", 1-")[0] for e in index_entries(people)] == [
@@ -325,9 +331,10 @@ def test_a_decomposed_umlaut_in_a_gedcom_name_sorts_with_its_precomposed_twin():
     assert givens(people, de()) == ["Anna", "Ulrich", "Carl"]
 
 
-def test_sharp_s_is_ss_in_german_and_in_english():
+def test_sharp_s_is_ss_in_german_and_in_english_and_stays_in_capitals():
     people = [("Anna", "Weiß"), ("Ben", "Weiss"), ("Carl", "Weis"), ("Dora", "Weisz")]
-    expected = ["WEIS, Carl", "WEISS, Anna", "WEISS, Ben", "WEISZ, Dora"]
+    # Weiß and Weiss are different names, so the capitals keep ß
+    expected = ["WEIS, Carl", "WEIß, Anna", "WEISS, Ben", "WEISZ, Dora"]
     assert heads(people, de()) == expected
     assert heads(people) == expected  # the English fold already casefolds ß to ss
 
@@ -345,10 +352,11 @@ def test_von_der_heide_files_under_h():
         ("Karl", "Hahn"),
         ("Eva", "Vogel"),
     ]
+    # the skipped particles print after the given name, so the entry reads as it files
     assert heads(people, de()) == [
         "HAAS, Ida",
         "HAHN, Karl",
-        "VON DER HEIDE, Anna",
+        "HEIDE, Anna von der",
         "HEINE, Bert",
         "VOGEL, Eva",
     ]
@@ -356,11 +364,30 @@ def test_von_der_heide_files_under_h():
     assert heads(people)[-1] == "VON DER HEIDE, Anna"
 
 
+def test_german_skips_zur_and_von_und_zu():
+    people = [
+        ("Ida", "Lang"),
+        ("Anna", "zur Lippe"),
+        ("Karl", "von und zu Guttenberg"),
+        ("Bert", "Gut"),
+        ("Jan", "ten Brink"),
+        ("Eva", "Braun"),
+    ]
+    assert heads(people, de()) == [
+        "BRAUN, Eva",
+        "BRINK, Jan ten",
+        "GUT, Bert",
+        "GUTTENBERG, Karl von und zu",
+        "LANG, Ida",
+        "LIPPE, Anna zur",
+    ]
+
+
 def test_van_gogh_files_between_goethe_and_gogol():
     people = [("Anna", "Goethe"), ("Vincent", "van Gogh"), ("Nikolai", "Gogol")]
     assert heads(people, de()) == [
         "GOETHE, Anna",
-        "VAN GOGH, Vincent",
+        "GOGH, Vincent van",
         "GOGOL, Nikolai",
     ]
     assert heads(people) == ["GOETHE, Anna", "GOGOL, Nikolai", "VAN GOGH, Vincent"]
@@ -377,17 +404,15 @@ def test_particles_match_whole_words_only():
     assert heads(people, de()) == ["RUHE, Ida", "VANDERHOFF, Bert"]
 
 
-def test_the_sort_changes_the_order_but_never_the_text():
+def test_the_sort_changes_the_order_but_not_the_spelling():
     people = [
         ("Ulrich", "Müller"),
         ("Anna", "Mueller"),
         ("Carl", "Muller"),
         ("Dora", "Mutz"),
-        ("Eva", "von der Heide"),
         ("Ida", "Haas"),
-        ("Jörg", "van Gogh"),
     ]
-    english, german = index_entries(people), index_entries(people, de())
+    english, german = heads(people), heads(people, de())
     assert sorted(german) == sorted(english)
     assert german != english
 
@@ -407,11 +432,15 @@ def test_german_sort_settings_follow_din_5007_2():
             "zu",
             "vom",
             "zum",
+            "zur",
+            "und",
             "van",
             "de",
             "der",
             "den",
             "dem",
+            "ten",
+            "ter",
         ],
     }
 
@@ -432,12 +461,12 @@ def test_french_skips_de_and_elided_d_but_keeps_articles_and_du():
     ]
     assert heads(people, kincade.lang.load_strings("fr")) == [
         "ARNAUD, Anne",
-        "D’ARTAGNAN, Charles",
+        "ARTAGNAN, Charles d’",
         "DU BELLAY, Joachim",
         "DUBOIS, Marc",
-        "DE GAULLE, Jean",
+        "GAULLE, Jean de",
         "GAUTHIER, Paul",
-        "DE LA FONTAINE, Jean",
+        "LA FONTAINE, Jean de",
         "LAMBERT, Louis",
     ]
     assert heads(people)[:4] == [
@@ -473,10 +502,25 @@ def test_an_elided_particle_matches_either_apostrophe():
     assert strings["sort"]["ignore_particles"] == ["d'"]
     people = [("Ann", "Brun"), ("Eve", "d’Arc"), ("Ida", "D'Amours"), ("Jo", "Carre")]
     assert heads(people, strings) == [
-        "D'AMOURS, Ida",
-        "D’ARC, Eve",
+        "AMOURS, Ida D'",
+        "ARC, Eve d’",
         "BRUN, Ann",
         "CARRE, Jo",
+    ]
+
+
+def test_french_files_hyphenated_names_word_by_word():
+    people = [
+        ("Charles", "Sainte-Beuve"),
+        ("Antoine", "Saint-Exupéry"),
+        ("Rosa", "Martinez"),
+        ("Paul", "Martin-Rey"),
+    ]
+    assert heads(people, kincade.lang.load_strings("fr")) == [
+        "MARTIN-REY, Paul",
+        "MARTINEZ, Rosa",
+        "SAINT-EXUPÉRY, Antoine",
+        "SAINTE-BEUVE, Charles",
     ]
 
 
@@ -491,12 +535,12 @@ def test_spanish_files_enye_after_n_and_skips_de_del_and_their_articles():
         ("Inés", "Ríos"),
     ]
     assert heads(people, kincade.lang.load_strings("es")) == [
-        "DE LA FUENTE, Juan",
+        "FUENTE, Juan de la",
         "FUENTES, Rosa",
         "MUNTANER, Luis",
         "MUÑOZ, Ana",
         "MURILLO, Eva",
-        "DEL RÍO, Pedro",
+        "RÍO, Pedro del",
         "RÍOS, Inés",
     ]
     assert heads(people)[:4] == [
@@ -504,6 +548,25 @@ def test_spanish_files_enye_after_n_and_skips_de_del_and_their_articles():
         "DEL RÍO, Pedro",
         "FUENTES, Rosa",
         "MUÑOZ, Ana",
+    ]
+
+
+def test_spanish_keeps_a_leading_article_as_the_filing_word():
+    people = [
+        ("Manuel", "Las Heras"),
+        ("Ana", "Heras"),
+        ("Miguel", "de los Santos"),
+        ("José", "San José"),
+        ("Luis", "Ruiz Zorrilla"),
+        ("Eva", "Ruiz-Mateos"),
+    ]
+    assert heads(people, kincade.lang.load_strings("es")) == [
+        "HERAS, Ana",
+        "LAS HERAS, Manuel",
+        "RUIZ-MATEOS, Eva",
+        "RUIZ ZORRILLA, Luis",
+        "SAN JOSÉ, José",
+        "SANTOS, Miguel de los",
     ]
 
 
@@ -720,9 +783,9 @@ def test_a_language_file_can_give_only_the_sort_keys_it_changes(tmp_path):
         ('[sort]\nexpand = ["ñ"]\n', "sort.expand"),  # a list where a table is expected
         ('[sort]\nignore_particles = "van"\n', "sort.ignore_particles"),
         (
-            '[sort]\nignore_particles = ["van der"]\n',
+            '[sort]\nignore_particles = ["de l’"]\n',
             "sort.ignore_particles",
-        ),  # one word per item
+        ),  # an elided particle is one word
         ('[sort]\nignore_particles = [""]\n', "sort.ignore_particles"),
         (
             '[sort]\nignore_particles = ["l’a"]\n',

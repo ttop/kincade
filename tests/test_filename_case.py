@@ -53,7 +53,7 @@ def test_browser_download_filename_keeps_recorded_case(chart, preserve):
 
 
 @pytest.mark.parametrize("fan", [False, True], ids=["pedigree", "fan"])
-@pytest.mark.parametrize("language,label", [("en", "Living"), ("de", "Lebend")])
+@pytest.mark.parametrize("language,label", [("en", "Living"), ("de", "Lebende Person")])
 def test_cli_generated_filename_keeps_localized_privacy_label(
     tmp_path, fan, language, label
 ):
@@ -76,5 +76,5 @@ def test_cli_generated_filename_keeps_localized_privacy_label(
         == 0
     )
     filenames = [p.name for p in tmp_path.glob("*.pdf")]
-    assert len(filenames) == 1 and filenames[0].startswith(label)
+    assert len(filenames) == 1 and label in filenames[0]
     assert "Alice" not in filenames[0] and "McClure" not in filenames[0]

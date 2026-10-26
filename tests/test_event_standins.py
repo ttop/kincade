@@ -251,10 +251,10 @@ def test_german_labels_and_index_pieces():
     text = drawn(render(tree, index=False, lang="de"))
     assert "get. 1750" in text and "in Little Hall" in text
     assert "begr. 1800" in text and "in Churchyard" in text
-    assert index_lines(tree, "de") == ["DOE, Ann (~ 1750, begr. 1800), 1-1"]
+    assert index_lines(tree, "de") == ["DOE, Ann (~ 1750, begr. 1800), 1/1"]
 
 
-def test_german_cremation_label_is_abbreviated():
+def test_german_cremation_label_is_written_out():
     tree = read_gedcom(
         ged(
             "0 @I1@ INDI",
@@ -265,7 +265,7 @@ def test_german_cremation_label_is_abbreviated():
         )
     )
     text = drawn(render(tree, index=False, lang="de"))
-    assert "eingeäsch. 1900" in text and "in Crematorium" in text
+    assert "eingeäschert 1900" in text and "in Crematorium" in text
 
 
 # ---------------------------------------------------------------- privacy

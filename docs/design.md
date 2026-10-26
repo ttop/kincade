@@ -33,7 +33,7 @@ Smaller screens stack the controls and chart, with a 16px side gutter at 320px.
 Colors follow `prefers-color-scheme`.
 
 The page has no framework, bundler, service worker, remembered settings, offline
-mode, language picker, blank chart, fan legends or highlights. PDFs use English.
+mode, blank chart, fan legends or highlights.
 It installs Kincade from the site wheel, with external Pyodide and fonts.
 
 ### Build and origins
@@ -88,7 +88,9 @@ Each rejection is caught so later requests can still run. The status line
 includes the first-visit download note until Ready; a startup failure names its
 step and host and offers Retry.
 
-Initialization reports each step and its host, in this order:
+Initialization reports each step and its host, in this order. Steps travel as
+codes (`pyodide`, `micropip`, `reportlab`, `kincade`, `fonts`, `start`) and so
+do hosts (`jsdelivr`, `pypi`, `site`, `none`); the page words them.
 
 1. After reporting “Loading Pyodide,” dynamically import the pinned
    `pyodide.mjs` from the absolute jsDelivr URL
@@ -117,12 +119,16 @@ HTTP origin with `isSecureContext` false; physical LAN routing is outside its sc
 
 | Request | Reply |
 |---|---|
-| `init {manifest, glue, wheelUrl}` | `status {text}` per step, then `ready {fonts: "embedded" \| "base14", kincade}`, or `failed {step, host, message}` |
+| `init {manifest, glue, wheelUrl}` | `status {step}` per step, then `ready {fonts: "embedded" \| "base14", kincade}`, or `failed {step, host, message, code, params}` |
 | `open {bytes}` | `opened {count}` |
 | `search {seq, text, excludePrivate, standins}` | `results {seq, total, rows}` |
-| `root-metadata {seq, treeVersion, rootId, adoptiveParents, largePrint, excludePrivate, preserveCase}` | `root-metadata {seq, treeVersion, rootId, adoptiveParents, largePrint, excludePrivate, preserveCase, depth, families}`; `families` contains `{id, label}` objects |
-| `render {seq, rootId, chart, settings}` | `rendered {seq, pdf, filename, summary, preview: {pages, width, height}}`, with PDF as a transferred `ArrayBuffer` |
-| Failed `open`, `search`, `root-metadata` or `render` | `error {request, seq, message, details}`; `seq` for search/metadata/render, empty details for `ValueError`, otherwise Python traceback |
+| `root-metadata {seq, treeVersion, rootId, adoptiveParents, largePrint, excludePrivate, preserveCase, lang}` | `root-metadata {seq, treeVersion, rootId, adoptiveParents, largePrint, excludePrivate, preserveCase, lang, depth, families}`; `families` contains `{id, spouse, details}` objects |
+| `render {seq, rootId, chart, settings}` | `rendered {seq, pdf, filename, summary, preview: {pages, width, height}}`, with PDF as a transferred `ArrayBuffer`; `summary` holds counts: `{charts, indexPages, pages}` for a pedigree, `{generations, people}` for a fan |
+| Failed `open`, `search`, `root-metadata` or `render` | `error {request, seq, message, code, params, details}`; `seq` for search/metadata/render, empty details for `ValueError` and coded errors, otherwise Python traceback |
+
+A `code` names a page message, filled from any `params`: `download`,
+`wheelMismatch`, `notReady` and `noPeople`. Other errors carry a `null` code. The page words an
+error with details by its operation and shows a `ValueError` message as written.
 
 ### Plain-Python session
 
@@ -152,15 +158,19 @@ successful opens clear it, and failed opens preserve it. This read-only metadata
 operation changes neither the last PDF preview nor the session's font set.
 Search continues to return rows without planning each person's ancestry.
 
-`Session.root_families(root_id, exclude_private=False, preserve_case=False)`
-returns `{id, label}` objects for families that name the root as a partner,
-preferring FAMS order and including unions without a reciprocal FAMS link.
-Labels contain the family ID, spouse name or "Unknown spouse", and available
-marriage date and place. Privacy conceals a possibly living spouse's name and
-either living partner's marriage details; surname case follows `preserve_case`.
+`Session.root_families(root_id, exclude_private=False, preserve_case=False,
+lang="en")` returns `{id, spouse, details}` objects for families that name the
+root as a partner, preferring FAMS order and including unions without a
+reciprocal FAMS link. `spouse` is the spouse's name, or empty when the family
+names none. `details` holds the available marriage date and place, worded in
+`lang` as a pedigree box words them. The page joins the ID, the spouse or its
+own Unknown spouse wording, and the details. Privacy conceals a possibly living
+spouse's name with `lang`'s living label and hides either living partner's
+marriage details; surname case follows `preserve_case`.
 The root-metadata operation returns these families together with pedigree depth.
 
-`Session.render(root_id, chart, settings)` returns `(pdf, filename, summary)`.
+`Session.render(root_id, chart, settings)` returns `(pdf, filename, summary)`,
+where `summary` is the counts the page words.
 After success, `Session.preview` holds `{pages, width, height}` for that PDF;
 it starts as `None`, and failed renders preserve the previous metadata. Pedigree
 uses `Rendered.pages`, including any index pages, and `PAPER_SIZES` for the actual
@@ -169,39 +179,46 @@ Width and height are PDF points. The worker attaches these values to the rendere
 reply without changing the session's return tuple or the shared summaries.
 `PAGE_OPTIONS` is a chart-to-key-set mapping:
 
-- `"pedigree"`: all `Options` dataclass fields except `lang`, `today`, `compress`
-  and `fonts`: `generations`, `exclude_private`, `adoptive_parents`,
+- `"pedigree"`: all `Options` dataclass fields except `today`, `compress` and
+  `fonts`: `generations`, `exclude_private`, `adoptive_parents`,
   `event_standins`, `empty_boxes`, `show_ids`, `shorten_places`, `index`,
   `page_numbers`, `footer`, `title`, `paper`, `large_print`, `shadow`, `preserve_case`,
-  `root_family`.
+  `root_family`, `lang`.
 - `"fan"`: `generations`, `exclude_private`, `adoptive_parents`, `event_standins`,
-  `preserve_case`, `ink`, `paper`, `title`, `footer`; the union of `plan_fan` keyword arguments
-  and `FanOptions` fields, with the same four exclusions.
+  `preserve_case`, `ink`, `paper`, `title`, `footer`, `lang`; the union of `plan_fan`
+  keyword arguments and `FanOptions` fields, with the same three exclusions.
 
 Omitted keys use library defaults. Unknown charts, keys outside the selected
-chart's set and unknown root record IDs raise plain `ValueError`. Pedigree
+chart's set, unknown root record IDs and a `lang` outside `LANGUAGES`, the
+bundled language codes, raise plain `ValueError`. A tree with no people raises
+`PageError`, a `ValueError` whose `code` is `noPeople`. Pedigree
 Generations accepts `None` or an integer at least 1; fan Generations accepts an
 integer from 2 to 7. Neither accepts `bool` as a number.
 
 A pedigree uses `render_with_counts(tree, root_id, Options(**settings,
-fonts=self.fonts))` and `pedigree_summary(rendered)`. A fan plans with generations,
-privacy, parent mode, stand-ins, surname case and ink, then draws with paper,
-title, footer, ink and the session fonts. Planning and drawing receive the same
-ink because `plan_fan` chooses the fills. Its summary uses `fan_summary(fan)`.
+fonts=self.fonts))` and counts its chart, index and total pages. A fan plans with
+generations, privacy, parent mode, stand-ins, surname case, language and ink, then
+draws with paper, title, footer, language, ink and the session fonts. Planning and
+drawing receive the same ink because `plan_fan` chooses the fills. Its summary
+counts generations and `fan_people(fan)`.
 Both chart types use uppercase surnames unless `preserve_case` is enabled,
 including the pedigree index,
-PDF metadata and the default fan title. The option does not change stored names,
+PDF metadata and the default fan title. `lang.fmt_surname` capitalizes letter by
+letter and keeps a letter whose capital is longer (ß, not SS). Leading particles
+the language's `ignore_particles` skips keep their recorded case (Anna von der
+HEIDE), and `lang.index_name` prints them after the given name (HEIDE, Anna von
+der), so an entry reads as it files. `SortRules.particle_end` finds where they end. The option does not change stored names,
 matching or index sorting. Search rows capitalize surnames.
 Both download filenames use `output_root_name(tree, root_id, ...)` with the
 chart's privacy and parent settings, plus Large print for pedigree. It returns
-the root's recorded name spelling or the localized living label when privacy
-conceals the root. `default_output_name` and `default_fan_output_name` make that
-name file-system safe. Filename spelling is independent of `preserve_case`.
+the root's recorded name spelling or the chart language's living label when
+privacy conceals the root. `default_output_name` and `default_fan_output_name`
+make that name file-system safe. Filename spelling is independent of `preserve_case`.
 A fan uses sans and bold faces, so its PDF embeds two subsets rather than the
 pedigree's four.
 
-`person_line`, `pedigree_summary` and `fan_summary` in `kincade.cli` serve both
-the CLI and page without changing CLI wording. The fan summary sums
+`person_line` and `fan_people` in `kincade.cli` serve both the CLI and page;
+`fan_summary` words `fan_people` for the CLI. `fan_people` sums
 `1 / cell.copies` for filled cells and rounds to count distinct people.
 These helpers, `find_people`, `output_root_name`, the filename helpers,
 `render_with_counts`, `BASE14`, `display_name`, `living_checker` and `nobody_living`
@@ -211,7 +228,8 @@ package.
 The default printed pedigree heading uses the same `meta_title` template as the
 PDF document title, including the privacy-safe root name. An explicit `title`
 overrides the printed heading. Blank charts use the base language title. Output
-filenames use their own format and keep recorded name spelling.
+filenames use the language's `file_name`, `fan_file_name` and `blank_file_name`
+templates and keep recorded name spelling.
 
 ### Controls and rendering state
 
@@ -242,6 +260,7 @@ its summary.
 | Ink | fan, always | select: Color, Grayscale, Black and white | Color | `ink`: `"color"`, `"grayscale"` or `"bw"` |
 | Exclude private | both, always | checkbox | off | `exclude_private` |
 | Root marriage | pedigree, below the root person when multiple families exist | select: First recorded marriage and the root's partner families by record ID, spouse and marriage details | First recorded marriage | `root_family`: the selected family ID, or `null` for the default |
+| Chart language | both | select: English, Deutsch, Español, Français, Italiano | the page language | `lang`: `"en"`, `"de"`, `"es"`, `"fr"` or `"it"` |
 | Leave out unknown ancestors | pedigree | checkbox | off | `empty_boxes`: `true` when NOT checked |
 | Show record IDs | pedigree | checkbox | off | `show_ids` |
 | Last name UPPERCASE | both | checkbox | on | `preserve_case`: `true` when NOT checked |
@@ -249,9 +268,9 @@ its summary.
 | Christenings and burials stand in for missing births and deaths | both | checkbox | on | `event_standins` |
 | Shorten long places | pedigree | checkbox | on | `shorten_places` |
 | Drop shadow | pedigree | checkbox | off | `shadow` |
-| Title | pedigree | text, placeholder "Cascading Pedigree — Root's name" | empty | `title`: the text, or `null` when empty |
-| Title | fan | text, placeholder "Root's name — Fan chart" | empty | `title`: the text, or `null` when empty |
-| Footer | both | text, placeholder "Created <today's date> using Kincade" | empty | `footer`: the text, or `null` when empty |
+| Title | pedigree | text, placeholder "Cascading Pedigree — Root's name" in the chart language | empty | `title`: the text, or `null` when empty |
+| Title | fan | text, placeholder "Root's name — Fan chart" in the chart language | empty | `title`: the text, or `null` when empty |
+| Footer | both | text, placeholder "Created <today's date> using Kincade" in the chart language | empty | `footer`: the text, or `null` when empty |
 | No footer | both | checkbox; disables Footer | off | `footer: false` when checked, in place of Footer's value |
 | Page numbers | pedigree | checkbox | on | `page_numbers` |
 | Name index | pedigree | checkbox | on | `index` |
@@ -455,14 +474,50 @@ geometry and resize behavior against real PDFs.
 The PDF section retains an accessible heading without a visible title.
 Download PDF sits beside the live summary in a compact row that wraps on narrow
 screens. “Rendering…” overlays the preview during rendering. Download PDF uses
-the returned filename; the summary combines the returned chart summary,
-file size and a built-in-font note when needed. The header shows Kincade's
-version and links to the repository.
+the returned filename; the summary combines the returned counts, worded in the
+page language, the file size and a built-in-font note when needed. The header
+shows the language select and Kincade's version, and links to the repository.
 
 PDF cleanup uses `pagehide`, revoking the Blob URL only when the page is not
 being preserved in the back/forward cache (`event.persisted` is false). A cached
 page keeps its PDF URL so returning with Back can use the preview and download.
 The page registers no `unload` handler.
+
+### Page languages
+
+The page and its PDFs speak the bundled languages, keyed by ISO 639-1 codes:
+`en`, `de`, `es`, `fr` and `it`. Both the header's language select and Chart
+language build their options from the manifest's bundled languages
+(`fillLanguageChoices` in `web/app.js`), each option named in its own language;
+`web/index.html` holds only a static English option before the script runs. On
+load the page takes `?lang=` when it names a bundled language, else the first
+`navigator.languages` tag whose primary subtag does (`fr-CA` gives `fr`), else
+English. Choosing a language rewrites the URL's `lang` parameter with
+`history.replaceState`.
+
+`web/lang/<code>.toml` holds the page wording: one TOML file per language, a
+table per message prefix (`page`, `status`, `step`, `host`, `init`, `error`,
+`tree`, `root`, `family`, `options`, `pdf`) and a key per message, with the same
+keys and `{name}` placeholders in each file. A plural message is an inline table
+of `Intl.PluralRules` categories, `one` and `other`; numbers in messages use
+`Intl.NumberFormat` for the page language. Static text names its message with
+`data-i18n`, and attributes with `data-i18n-aria-label`, `data-i18n-placeholder`
+or `data-i18n-title`. Text the page writes later, such as status, counts and
+errors, registers its renderer, so a language change rewords it in place. The
+change also rewords generation and family choices and fetches the root metadata
+again so marriage details follow. It sends no render unless the chart language
+changes.
+
+Chart language is the PDFs' `lang`. It follows the page language while the two
+are equal, and a different choice stays when the page language changes. The
+Title and Footer placeholders use the chart language's title, fan title, footer,
+date format, first-of-month day and months, which `web/build.py` copies from
+the language files into the manifest's `languages`. The build also reads
+`web/lang/*.toml` with `tomllib`, flattens each file back to the dotted-key
+shape, and inlines the result as the manifest's `messages`, failing when the
+`web/lang` codes differ from the bundled chart languages. Filenames use the
+chart language's file-name templates, as the CLI's do; a concealed root's name
+is its living label.
 
 ### Verification boundary
 
@@ -722,8 +777,11 @@ spelling and applies the same unlimited-plan privacy estimate as the chart,
 with the localized living label supplied by the CLI. `preserve_case` controls
 chart text, default titles and PDF metadata; automatic filename spelling
 does not depend on it. Explicit `-o` and config `output` paths are used as supplied.
-`default_fan_output_name` uses the pedigree's safe stem
-rules, with `fan chart.pdf` when the stem is empty. The summary counts
+`default_output_name`, `default_fan_output_name` and `blank_output_name` fill the
+language's file-name template with the root name, capped at 100 characters and 200
+UTF-8 bytes. They replace characters a file name cannot hold in the whole name and
+add `.pdf`. An empty root name leaves the template's own words
+(`cascading pedigree.pdf`), and a template with no words gives `Kincade.pdf`. The summary counts
 requested generations and distinct people: each nonempty cell contributes
 `1 / copies`, and the sum is rounded. `_write_pdf` writes either chart.
 
@@ -744,7 +802,7 @@ Every layout number is a named constant in the "Page layout" section of `pdf.py`
 With `exclude_private`, possibly living people use the language's `Living` label
 and have no event details or printed record IDs, even with `show_ids`. They are
 omitted from the pedigree name index. The top-level language key `living_name`
-is `Living` in English and `Lebend` in German. Generated filenames, the default
+is `Living` in English and `Lebende Person` in German. Generated filenames, the default
 default chart titles and PDF metadata conceal a possibly living root name; explicit titles
 and output paths are used as supplied. CLI search and ambiguous-root lists hide
 living names and years while retaining record IDs. The browser root picker
@@ -784,7 +842,13 @@ numbers are no years of ours as `year_unknown`.
 3. the year of the birth, or of the christening standing in for it when the stand-ins are on; a missing or hidden year sorts after every year;
 4. the suffix's key, then the record ID.
 
-`lang.SortRules.fold` makes each key from the name as stored, never from its printed capitals: casefold and NFC; drop punctuation; for a surname, `ignore_particles`, then `mc_as_mac`; apply `expand` in one pass, longest key first; replace each `after_z` letter, including letters produced by an expansion, by a private-use character from U+E000, which sorts after z and after the `~` of an expansion; then NFKD, dropping the combining marks. An expansion such as `"aa" = "å"` sorts with Å when `after_z` includes `å`. The printed text never changes.
+`lang.SortRules.fold` makes each key from the name as stored, never from its printed capitals: casefold and NFC; for a surname, drop an elided particle (an `ignore_particles` item ending in an apostrophe, such as `d’`) from the front when letters follow it, matching either apostrophe; drop punctuation, with a hyphen or dash (Unicode Pd) becoming a space, so a hyphenated name files word by word; for a surname, the remaining `ignore_particles` as whole words or phrases of words, longest first, again and again, never the last word, then `mc_as_mac`; apply `expand` in one pass, longest key first; replace each `after_z` letter, including letters produced by an expansion, by a private-use character from U+E000, which sorts after z and after the `~` of an expansion; then NFKD, dropping the combining marks. An expansion such as `"aa" = "å"` sorts with Å when `after_z` includes `å`. The sort changes no spelling; only the skipped particles' case and place print differently, as above.
+
+Each entry ends with the boxes where the person is drawn, each from the language's `index.reference` template (`{chart}-{pos}`, German `{chart}/{pos}`), joined by commas.
+
+## Dates in words
+
+`lang.format_date` words a structured date: the qualifier words of `[dates]` before the date, the day from the `[days]` table (else its number), the month from `months.short`, and `date_format` for a full date. Before a date with a day, a word listed in `[dates.with_day]` replaces its plain form (French `avant le 3 mars 1990`, but `avant 1990`). Last, each phrase of `[dates.rewrite]` is replaced where it stands as whole words, longest first, in one pass: Italian elides `dal 8` to `dall’8`. Fan years use the `[years]` templates instead.
 
 ## Fonts
 

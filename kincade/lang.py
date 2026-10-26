@@ -44,8 +44,9 @@ DEFAULT_STRINGS: dict[str, Any] = {
     "footer_blank": "Created using Kincade",
     # a full date: the footer's date and GEDCOM dates that have a day
     "date_format": "{day} {month} {year}",
-    # the first day of a month in a date, where a language writes it apart (1er)
-    "day_one": "1",
+    # the days of the month a date writes otherwise than as their number, by number
+    # (French {"1": "1er"}); a day not listed prints as its number
+    "days": {},
     "chart_label": "Chart {n}",
     "continuation": "Number 1 on this chart is the same as number {pos} on chart {chart}.",
     # chart 1's line when it has continuation charts ("" for none): the continuation
@@ -56,6 +57,10 @@ DEFAULT_STRINGS: dict[str, Any] = {
     "page_number": "Page {page} of {pages}",
     # a box's record ID (--show-ids): the person's id, such as I12 in a GEDCOM file
     "record_id": "[{id}]",
+    # automatic PDF file names, before .pdf: {name} is the root person's name
+    "file_name": "{name} cascading pedigree",
+    "fan_file_name": "{name} fan chart",
+    "blank_file_name": "Blank cascading pedigree",
     "months": {"short": list(MONTHS)},
     "index": {
         "title": "Index",
@@ -67,6 +72,8 @@ DEFAULT_STRINGS: dict[str, Any] = {
         "buried": "bur. {death}",
         "cremated": "crem. {death}",
         "legend": "The numbers after each name indicate the chart number and box number. 6-1 is box 1 on chart 6.",
+        # where a person is drawn, after the name: {chart} and {pos}, its box
+        "reference": "{chart}-{pos}",
     },
     # Relationship note from Tree.parent_relationship, in either parents mode.
     # Uses available non-step parents, or the link's non-step relationships when
@@ -96,6 +103,12 @@ DEFAULT_STRINGS: dict[str, Any] = {
         "from": "from",
         "to": "to",
         "range": "-",
+        # the words above, by key, as they read before a date with a day, where they
+        # differ (French "avant le 3 mars")
+        "with_day": {},
+        # phrases a worded date rewrites, matched as whole words (Italian "dal 8" =
+        # "dall’8")
+        "rewrite": {},
     },
     "years": {
         "christening": "chr {y}",
@@ -121,13 +134,16 @@ PLACEHOLDERS: dict[str, tuple[str, ...]] = {
     "footer": ("date",),
     "footer_blank": (),
     "date_format": ("day", "month", "year"),
-    "day_one": (),
+    "days": (),
     "chart_label": ("n",),
     "continuation": ("pos", "chart"),
     "chart_note": (),
     "ellipsis": (),
     "page_number": ("page", "pages"),
     "record_id": ("id",),
+    "file_name": ("name",),
+    "fan_file_name": ("name",),
+    "blank_file_name": (),
     "months.short": (),
     "index.title": (),
     "index.born": ("birth",),
@@ -138,6 +154,7 @@ PLACEHOLDERS: dict[str, tuple[str, ...]] = {
     "index.buried": ("death",),
     "index.cremated": ("death",),
     "index.legend": (),
+    "index.reference": ("chart", "pos"),
     **{f"relationship.{key}": () for key in DEFAULT_STRINGS["relationship"]},
     **{f"labels.{key}": () for key in DEFAULT_STRINGS["labels"]},
     **{f"dates.{key}": () for key in DEFAULT_STRINGS["dates"]},
@@ -192,6 +209,12 @@ def fill(template: str, allowed: tuple[str, ...], values: Mapping[str, Any]) -> 
 
 # the bundled language files (package data), beside this module
 LANG_DIR = Path(__file__).resolve().parent / "lang"
+
+
+def languages() -> tuple[str, ...]:
+    """The bundled languages, by the names --lang takes (their files' stems, ISO 639-1
+    codes such as "fr"), in sorted order."""
+    return tuple(sorted(path.stem for path in LANG_DIR.glob("*.toml")))
 
 
 def _user_lang_dir() -> Path | None:
@@ -312,19 +335,51 @@ def _sort_text(text: str) -> str:
 
 
 def _letters_digits_and_spaces(text: str) -> str:
-    """The sort key without punctuation: every character that is not a letter or digit
-    is dropped, other whitespace becomes a space, and runs of spaces collapse to one
-    (with none at either end). "[HARTLEY] DAWSON" files as "hartley dawson", "O'Brien"
-    as "obrien", "St. John" as "st john". Applied before the [sort] settings, so the "~"
+    """The sort key without punctuation: a hyphen or dash and other whitespace become a
+    space, every other character that is not a letter or digit is dropped, and runs of
+    spaces collapse to one (with none at either end). "[HARTLEY] DAWSON" files as
+    "hartley dawson", "O'Brien" as "obrien", "St. John" as "st john" and
+    "Saint-Exupéry" as "saint exupery", word by word. Applied before the [sort] settings, so the "~"
     of an expansion and the after_z sentinels are not dropped.
     """
-    kept = "".join(ch if ch.isalnum() else " " if ch.isspace() else "" for ch in text)
+    kept = "".join(
+        ch if ch.isalnum() else " " if ch.isspace() or _is_dash(ch) else ""
+        for ch in text
+    )
     return squash(kept)
 
 
-# The [sort] settings. Their types differ from the template texts, so each has its own
-# check, which returns the value in the form SortRules reads. `expand` adds to the table
-# below it (a key of the same text is replaced); the two lists replace the list below.
+def _is_dash(ch: str) -> bool:
+    """A hyphen or dash (Unicode Pd): it parts the words of a name such as
+    Saint-Exupéry, so the sort reads them as words."""
+    return unicodedata.category(ch) == "Pd"
+
+
+# The [days] table and the [sort] settings. Their types differ from the template texts,
+# so each has its own check, which returns the value in the form its reader uses.
+# `days` and `expand` add to the table below them (the same key is replaced); the two
+# lists replace the list below.
+
+
+def _check_days(source: str, path: str, value: Any, base: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise LangError(
+            f'{source}: {path} must be a table of day = text, such as 1 = "1er"'
+        )
+    out = dict(base)
+    for key, text in value.items():
+        day = str(key).strip()
+        if (
+            type(key) not in (str, int)
+            or not day.isdecimal()
+            or not 1 <= int(day) <= 31
+        ):
+            raise LangError(f"{source}: {path} keys must be days from 1 to 31")
+        if not isinstance(text, str) or not text.strip():
+            raise LangError(f"{source}: {path}[{key!r}] must be non-empty text")
+        _check_text(source, f"{path}[{key!r}]", text, ())
+        out[str(int(day))] = text
+    return out
 
 
 def _check_mc_as_mac(source: str, path: str, value: Any, base: Any) -> bool:
@@ -366,6 +421,46 @@ def _check_after_z(source: str, path: str, value: Any, base: Any) -> list[str]:
     return letters
 
 
+# the date words a full date may word its own way
+_WITH_DAY_KEYS = ("about", "estimated", "calculated", "before", "after", "from", "to")
+
+
+def _check_with_day(source: str, path: str, value: Any, base: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise LangError(
+            f"{source}: {path} must be a table of date word = text, such as "
+            'before = "avant le"'
+        )
+    out = dict(base)
+    for key, text in value.items():
+        if key not in _WITH_DAY_KEYS:
+            raise LangError(
+                f"{source}: {path} keys must be among {', '.join(_WITH_DAY_KEYS)}"
+            )
+        if not isinstance(text, str) or not text.strip():
+            raise LangError(f"{source}: {path}.{key} must be non-empty text")
+        _check_text(source, f"{path}.{key}", text, ())
+        out[key] = text
+    return out
+
+
+def _check_rewrite(source: str, path: str, value: Any, base: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise LangError(
+            f"{source}: {path} must be a table of phrase = text, such as "
+            '"dal 8" = "dall’8"'
+        )
+    out = dict(base)
+    for phrase, text in value.items():
+        if not isinstance(phrase, str) or not phrase.strip():
+            raise LangError(f"{source}: {path} phrases must be non-empty text")
+        if not isinstance(text, str):
+            raise LangError(f"{source}: {path}[{phrase!r}] must be a string")
+        _check_text(source, f"{path}[{phrase!r}]", text, ())
+        out[squash(phrase)] = text
+    return out
+
+
 # the apostrophes an elided particle may end with, read as the first
 _APOSTROPHES = str.maketrans("’ʼ", "''")
 
@@ -377,21 +472,27 @@ def _check_ignore_particles(source: str, path: str, value: Any, base: Any) -> li
         )
     words = []
     for item in value:
-        if item.split() != [item]:
-            raise LangError(
-                f"{source}: {path} item {item!r} must be one word (no spaces)"
-            )
-        word = _sort_text(item).translate(_APOSTROPHES)
-        if "'" in word[:-1] or word == "'":
+        phrase = _sort_text(item).translate(_APOSTROPHES).split()
+        if not phrase:
+            raise LangError(f"{source}: {path} items must be non-empty text")
+        if "'" in " ".join(phrase)[:-1] or phrase == ["'"]:
             raise LangError(
                 f"{source}: {path} item {item!r} may have an apostrophe only at "
-                "its end, after the particle, as in d’"
+                "its end, after a one-word particle, as in d’"
             )
-        words.append(word)
+        if phrase[-1].endswith("'") and len(phrase) > 1:
+            raise LangError(
+                f"{source}: {path} item {item!r}: an elided particle such as d’ "
+                "must be one word"
+            )
+        words.append(" ".join(phrase))
     return words
 
 
-_SORT_CHECKS = {
+_OWN_CHECKS = {
+    "days": _check_days,
+    "dates.with_day": _check_with_day,
+    "dates.rewrite": _check_rewrite,
     "sort.expand": _check_expand,
     "sort.after_z": _check_after_z,
     "sort.ignore_particles": _check_ignore_particles,
@@ -415,8 +516,8 @@ def _layer(
         path = f"{prefix}{key}"
         if key not in base:
             notes.append(f"{source}: unknown key {path!r} ignored")
-        elif path in _SORT_CHECKS:
-            out[key] = _SORT_CHECKS[path](source, path, value, base[key])
+        elif path in _OWN_CHECKS:
+            out[key] = _OWN_CHECKS[path](source, path, value, base[key])
         elif isinstance(base[key], dict):
             if not isinstance(value, Mapping):
                 raise LangError(f"{source}: {path} must be a table")
@@ -486,11 +587,25 @@ def is_placeholder_surname(surname: str) -> bool:
     )
 
 
-def fmt_surname(surname: str, preserve_case: bool = False) -> str:
+def fmt_surname(
+    surname: str, preserve_case: bool = False, rules: SortRules | None = None
+) -> str:
+    """The surname as names print it: in capitals unless preserve_case. Leading
+    particles that `rules` skips when sorting (von der, de la, d’) keep their recorded
+    case: Anna von der HEIDE. A letter whose capital is two letters (ß) stays as it is.
+    """
     s = surname.strip()
     if preserve_case:
         return s
-    return "Mc" + s[2:].upper() if s.startswith("Mc") else s.upper()
+    cut = rules.particle_end(s) if rules else 0
+    front, rest = s[:cut], s[cut:]
+    return front + ("Mc" + _upper(rest[2:]) if rest.startswith("Mc") else _upper(rest))
+
+
+def _upper(text: str) -> str:
+    """Capitals, letter by letter, keeping a letter whose capital is longer (ß, not
+    SS), so a name keeps its letters."""
+    return "".join(ch if len(up := ch.upper()) > 1 else up for ch in text)
 
 
 def _with_suffix(name: str, suffix: str) -> str:
@@ -501,18 +616,19 @@ def _with_suffix(name: str, suffix: str) -> str:
     return name + suffix if suffix.startswith(",") else f"{name} {suffix}".strip()
 
 
-def display_name(p: Person, preserve_case: bool = False) -> str:
-    """Single-spaced name; uppercase the surname unless preserve_case is set."""
-    return _with_suffix(
-        squash(f"{p.prefix} {p.given} {fmt_surname(p.surname, preserve_case)}"),
-        p.suffix,
-    )
+def display_name(
+    p: Person, preserve_case: bool = False, rules: SortRules | None = None
+) -> str:
+    """Single-spaced name; the surname as fmt_surname prints it."""
+    surname = fmt_surname(p.surname, preserve_case, rules)
+    return _with_suffix(squash(f"{p.prefix} {p.given} {surname}"), p.suffix)
 
 
 def _day_text(day: Day, strings: Mapping[str, Any]) -> str:
-    """One date as text: the month in the language's short name, the 1st as day_one, a
-    full date (day, month and year) laid out by the date_format template, a double year
-    as 1731/32. A date with parts missing prints what it has, day month year.
+    """One date as text: the month in the language's short name, the day as the
+    language's days table writes it (see day_number), a full date (day, month and
+    year) laid out by the date_format template, a double year as 1731/32. A date with
+    parts missing prints what it has, day month year.
     """
     year = ""
     if day.year is not None:
@@ -533,15 +649,17 @@ def _day_text(day: Day, strings: Mapping[str, Any]) -> str:
 
 
 def day_number(day: int, strings: Mapping[str, Any]) -> str:
-    """The day of the month as a date prints it: the language's day_one for the 1st
-    (French 1er), else the number."""
-    return strings["day_one"] if day == 1 else str(day)
+    """The day of the month as a date prints it: the language's text for that day in
+    its days table, else the number."""
+    return strings["days"].get(str(day), str(day))
 
 
 def format_date(date: Date | None, strings: Mapping[str, Any] = DEFAULT_STRINGS) -> str:
     """A date as display text in the language of `strings`: the date's own `text` when
     it has one, else its structure in the language's words (abt, est, bef, aft, from,
-    to, and the dash between the two ends of a range). "" for no date.
+    to, and the dash between the two ends of a range). Before a date with a day, a word
+    in the language's with_day table replaces its plain form; the rewrite table's
+    phrases are then replaced. "" for no date.
     """
     if date is None:
         return ""
@@ -555,7 +673,20 @@ def format_date(date: Date | None, strings: Mapping[str, Any] = DEFAULT_STRINGS)
         date.quality,
         date.form if date.form in ("about", "before", "after", "from", "to") else "",
     ]
-    return "".join(words[key] + " " for key in keys if key) + words["range"].join(ends)
+    first = date.start or date.end
+    lead = words["with_day"] if first and first.day is not None else {}
+    text = "".join(lead.get(key, words[key]) + " " for key in keys if key)
+    return _rewrite(text + words["range"].join(ends), words["rewrite"])
+
+
+def _rewrite(text: str, phrases: Mapping[str, str]) -> str:
+    """`text` with each phrase of the table replaced where it stands as whole words,
+    longest phrase first, in one pass."""
+    if not phrases:
+        return text
+    keys = sorted(phrases, key=len, reverse=True)
+    pattern = r"(?<!\S)(?:" + "|".join(map(re.escape, keys)) + r")(?!\S)"
+    return re.sub(pattern, lambda m: phrases[m.group(0)], text)
 
 
 def year_of(date: Date | None) -> int | None:
@@ -572,12 +703,18 @@ def year_of(date: Date | None) -> int | None:
     return reading.start.year if reading and reading.start else None
 
 
-def index_name(p: Person, preserve_case: bool = False) -> str:
-    """'SURNAME, prefix given suffix' as the index prints a name (the surname alone, or
-    the rest alone, if the other is missing). preserve_case keeps recorded case.
+def index_name(
+    p: Person, preserve_case: bool = False, rules: SortRules | None = None
+) -> str:
+    """'SURNAME, prefix given particles suffix' as the index prints a name (the surname
+    alone, or the rest alone, if the other is missing). The leading particles that
+    `rules` skips when sorting follow the given name, so a name prints as it files:
+    "HEIDE, Anna von der". preserve_case keeps recorded case.
     """
-    rest = _with_suffix(squash(f"{p.prefix} {p.given}"), p.suffix)
-    surname = fmt_surname(p.surname, preserve_case)
+    s = p.surname.strip()
+    cut = rules.particle_end(s) if rules else 0
+    rest = _with_suffix(squash(f"{p.prefix} {p.given} {s[:cut]}"), p.suffix)
+    surname = fmt_surname(s[cut:], preserve_case)
     return f"{surname}, {rest}" if surname and rest else surname or rest
 
 
@@ -609,7 +746,12 @@ class SortRules:
         # a partial table keeps the English value of what it leaves out
         sort = {**DEFAULT_STRINGS["sort"], **sort}
         particles = sort["ignore_particles"]
-        self.particles = frozenset(p for p in particles if not p.endswith("'"))
+        # word phrases, longest first, so "de la" is tried before "de"
+        self.particles = sorted(
+            (tuple(p.split()) for p in particles if not p.endswith("'")),
+            key=len,
+            reverse=True,
+        )
         # longest first, so "dell'" is tried before "d'"
         self.elided = sorted(
             (p for p in particles if p.endswith("'")), key=len, reverse=True
@@ -657,7 +799,45 @@ class SortRules:
         "Van" stays "van").
         """
         words = s.split()
-        i = 0
-        while i < len(words) - 1 and words[i] in self.particles:
-            i += 1
+        i = self._particle_words(words)
         return " ".join(words[i:]) if i else s
+
+    def _particle_words(self, words: list[str]) -> int:
+        """How many of `words`, in sort form, are leading particles: phrases matched
+        longest first, again and again, never taking the last word."""
+        i = 0
+        while True:
+            for phrase in self.particles:
+                n = len(phrase)
+                if n < len(words) - i and tuple(words[i : i + n]) == phrase:
+                    i += n
+                    break
+            else:
+                return i
+
+    def particle_end(self, surname: str) -> int:
+        """Where a surname's leading particles end, as an index into it: the particles
+        the sort skips, as recorded ("de la " of "de la Fuente", "d’" of "d’Artagnan").
+        0 for none. Names print these in recorded case, and the index after the given
+        name."""
+        first = surname.lstrip()
+        lead = len(surname) - len(first)
+        front = _sort_text(first).translate(_APOSTROPHES)
+        for particle in self.elided:
+            if front.startswith(particle) and _letters_digits_and_spaces(
+                front[len(particle) :]
+            ):
+                # the recorded characters that read as the particle
+                return lead + next(
+                    (
+                        k
+                        for k in range(1, len(first) + 1)
+                        if _sort_text(first[:k]).translate(_APOSTROPHES) == particle
+                    ),
+                    len(particle),
+                )
+        words = list(re.finditer(r"\S+", surname))
+        n = self._particle_words(
+            [_letters_digits_and_spaces(_sort_text(m.group())) for m in words]
+        )
+        return words[n].start() if n else 0

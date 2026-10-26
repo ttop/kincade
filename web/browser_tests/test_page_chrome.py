@@ -54,7 +54,7 @@ def test_compact_file_picker_supports_keyboard_and_truthful_drop_source(app):
             "buffer": b"0 @K@ INDI\n1 NAME Keyboard /Synthetic/",
         }
     )
-    expect(app.page.locator("#file-summary")).to_have_text("keyboard.ged: 1 people")
+    expect(app.page.locator("#file-summary")).to_have_text("keyboard.ged: 1 person")
     expect(app.page.locator("#file")).to_be_hidden()
     assert app.page.locator("#file").input_value() == ""
     app.page.locator("#drop-zone").evaluate(
@@ -62,7 +62,7 @@ def test_compact_file_picker_supports_keyboard_and_truthful_drop_source(app):
         transfer.items.add(new File(['0 @D@ INDI\\n1 NAME Dropped /Synthetic/'], 'drop.ged'));
         e.dispatchEvent(new DragEvent('drop', {bubbles:true, dataTransfer:transfer}));}"""
     )
-    expect(app.page.locator("#file-summary")).to_have_text("drop.ged: 1 people")
+    expect(app.page.locator("#file-summary")).to_have_text("drop.ged: 1 person")
     expect(app.page.locator("#sample")).to_be_visible()
     assert app.page.locator("#file").input_value() == ""
     expect(chooser).to_be_enabled()

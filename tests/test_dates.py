@@ -172,7 +172,7 @@ def test_dates_print_from_their_structure(date, expected):
 def test_dates_print_in_the_language_of_the_strings():
     de = kincade.lang.load_strings("de")
     assert format_date(Date("about", Day(1755)), de) == "um 1755"
-    assert format_date(Date("between", Day(1622), Day(1632)), de) == "1622–1632"
+    assert format_date(Date("between", Day(1622), Day(1632)), de) == "1622 – 1632"
     assert format_date(Date("exact", Day(1917, 1, 13)), de) == "13. Jan. 1917"
 
 

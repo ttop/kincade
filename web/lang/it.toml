@@ -1,0 +1,132 @@
+# Kincade web page language file: Italian.
+#
+# This file holds the browser page's own wording, with the same keys as
+# web/lang/en.toml (see that file for what each table and key words). It
+# addresses the reader as informal ("tu").
+
+[page]
+title = "Kincade — Alberi genealogici"
+tagline = "Crea in PDF un albero degli antenati o un albero a ventaglio da un file GEDCOM"
+version = "Versione {version}"
+language = "Lingua della pagina"
+languageName = "Italiano"
+privacy = "Il tuo file GEDCOM viene letto in questo browser e non viene mai caricato su un server."
+
+[status]
+loading = "Caricamento di Kincade…"
+ready = "Pronto"
+retry = "Riprova"
+
+[step]
+pyodide = "Caricamento di Pyodide"
+micropip = "Caricamento di micropip"
+reportlab = "Installazione di reportlab"
+kincade = "Installazione di Kincade"
+fonts = "Caricamento dei font"
+start = "Avvio di Kincade"
+
+[host]
+site = "questo sito"
+browser = "browser"
+
+[init]
+failed = "Errore – {step} ({host}): {message}"
+downloadHint = "Ricarica la pagina. Se il download continua a non riuscire, segnala questo URL al gestore del sito."
+
+[error]
+download = "Download non riuscito: HTTP {status} per {url}"
+wheelMismatch = "L’HTML e il pacchetto wheel di Kincade potrebbero provenire da build diverse rimaste nella cache. Ricarica la pagina per scaricare file della stessa build."
+notReady = "Kincade non è pronto. Ricarica la pagina e riprova."
+noPeople = "Questo file GEDCOM non contiene persone."
+open = "Impossibile aprire l’albero genealogico."
+search = "Impossibile cercare nell’albero genealogico."
+rootMetadata = "Impossibile leggere i dati della persona di partenza."
+render = "Impossibile creare il PDF."
+read = "Impossibile leggere {name}: {error}"
+details = "Dettagli"
+
+[tree]
+heading = "Albero genealogico"
+sample = "Vedi un esempio"
+choose = "Scegli file"
+hint = "Scegli o trascina qui un file GEDCOM (5.5, 5.5.1 o 7.0)"
+input = "Scegli un file GEDCOM"
+summary = { one = "{name}: {count} persona", other = "{name}: {count} persone" }
+
+[root]
+heading = "Persona di partenza"
+search = "Cerca per nome o ID del record"
+openList = "Apri l’elenco delle persone"
+clear = "Annulla la scelta della persona"
+matching = "Persone corrispondenti"
+choose = "Scegli una persona di partenza."
+prompt = "Scegli una persona di partenza per vedere l’albero."
+selected = "Persona di partenza: {id}, {name}"
+searching = "Ricerca in corso…"
+unavailable = "Ricerca non disponibile."
+matches = { one = "{count} risultato", other = "{count} risultati" }
+shown = "Mostrati {shown} su {total}"
+
+[family]
+label = "Matrimonio della persona di partenza"
+first = "Primo matrimonio registrato"
+loading = "Caricamento dei matrimoni…"
+unknownSpouse = "Coniuge sconosciuto"
+
+[options]
+heading = "Opzioni"
+chart = "Tipo di albero"
+pedigree = "Antenati"
+fan = "Ventaglio"
+generations = "Generazioni"
+allGenerations = "Tutte le generazioni"
+custom = "Altro…"
+paper = "Formato carta"
+portrait = "verticale"
+landscape = "orizzontale"
+letter = "Lettera"
+tabloid = "Tabloid"
+largePrint = "Caratteri grandi"
+ink = "Stampa"
+color = "A colori"
+grayscale = "In scala di grigi"
+bw = "In bianco e nero"
+hideLiving = "Nascondi le persone viventi"
+more = "Altre opzioni"
+chartLanguage = "Lingua dell’albero"
+customGenerations = "Numero di generazioni"
+all = "tutte"
+generationsHelp = "Lascia vuoto per includere tutte le generazioni."
+generationsError = "Inserisci un numero intero pari o superiore a 1, oppure lascia vuoto per tutte le generazioni."
+generationsInvalid = "Inserisci un numero intero pari o superiore a 1, oppure lascia vuoto."
+emptyBoxes = "Ometti gli antenati sconosciuti"
+uppercase = "Cognome in MAIUSCOLO"
+showIds = "Mostra gli ID dei record"
+adoptive = "Mostra i genitori adottivi e affidatari"
+standins = "Usa battesimi e sepolture in mancanza di nascite e morti"
+shortenPlaces = "Abbrevia i nomi di luogo lunghi"
+shadow = "Ombreggiatura"
+title = "Titolo"
+rootName = "Nome della persona di partenza"
+footer = "Piè di pagina"
+noFooter = "Nessun piè di pagina"
+pageNumbers = "Numeri di pagina"
+index = "Indice dei nomi"
+
+[pdf]
+heading = "PDF"
+download = "Scarica PDF"
+open = "Apri PDF"
+preview = "Anteprima del PDF"
+rendering = "Creazione in corso…"
+builtinFonts = "Usati i font integrati"
+bytes = { one = "{size} byte", other = "{size} byte" }
+kb = "{size} KB"
+mb = "{size} MB"
+pedigree = "{charts}, {indexPages}, {pages}"
+charts = { one = "{count} tavola", other = "{count} tavole" }
+indexPages = { one = "{count} pagina dell’indice", other = "{count} pagine dell’indice" }
+pages = { one = "{count} pagina", other = "{count} pagine" }
+fan = "albero a ventaglio, {generations}, {people}"
+generations = { one = "{count} generazione", other = "{count} generazioni" }
+people = { one = "{count} persona", other = "{count} persone" }

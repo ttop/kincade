@@ -7,10 +7,10 @@
 # keep them short.
 #
 # Wording follows French genealogical usage: "Arbre d’ascendance" for a pedigree chart,
-# "tableau" for each sheet, naiss./mar./déc. for born/married/died, "à" before a place,
-# "vers" for approximate dates, the Académie month abbreviations, 1er for the first of
-# the month, ° and † for years in the index, and words that do not change with a
-# person's sex.
+# "tableau" for each sheet, naiss./mar./décès for born/married/died, "à" before a place,
+# "vers" for approximate dates and "le" before a date with a day, the Imprimerie
+# nationale month abbreviations, 1er for the first of the month, ° and † for years in
+# the index, and words that do not change with a person's sex.
 
 # Base pedigree title. --title overrides the printed heading.
 title = "Arbre d’ascendance"
@@ -33,8 +33,6 @@ footer_blank = "Créé avec Kincade"
 # Full date for the footer and for GEDCOM dates with a day: "3 mars 1903".
 date_format = "{day} {month} {year}"
 
-# The first of the month: "1er mars 1903".
-day_one = "1er"
 
 # Chart label, top right.
 chart_label = "Tableau {n}"
@@ -57,17 +55,31 @@ page_number = "Page {page} sur {pages}"
 # type, so keep it short.
 record_id = "[{id}]"
 
+# The names of the saved PDFs, before .pdf. {name} is the root person's name.
+# The noun comes first, and a straight apostrophe is easier to type in a file name.
+file_name = "Arbre d'ascendance {name}"
+fan_file_name = "Arbre en éventail {name}"
+blank_file_name = "Arbre d'ascendance vierge"
+
 [months]
-# January first. mars, mai, juin and août are written out; the rest take a period.
-short = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
+# January first, as the Imprimerie nationale abbreviates them: mars, mai, juin and août
+# are written out; the rest take a period.
+short = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juill.", "août", "sept.", "oct.", "nov.", "déc."]
+
+[days]
+# The first of the month is 1er (1er mars 1903); other days are numbers.
+1 = "1er"
 
 [index]
 # Title of the name index pages.
 title = "Index des noms"
 
 # One line under the title of the first index page: how to read the numbers after each
-# name (tableau-numéro: 6-1 is box 1 on tableau 6). An empty string leaves it off.
-legend = "Les nombres après chaque nom indiquent le tableau et le numéro : 6-1 est le n° 1 du tableau 6."
+# name (tableau-case: 6-1 is box 1 on tableau 6). An empty string leaves it off.
+legend = "Les nombres qui suivent chaque nom indiquent le tableau puis la case : 6-1 renvoie au n° 1 du tableau 6."
+
+# Where a person is drawn: tableau-case.
+reference = "{chart}-{pos}"
 
 # Birth-year piece of an index entry: ° = naissance.
 born = "° {birth}"
@@ -92,21 +104,22 @@ cremated = "crém. {death}"
 # Relationship note from Tree.parent_relationship, in either parents mode.
 # Uses available non-step parents, or the link's non-step relationships when
 # neither parent is available. Birth and other relationships give no note. Nouns,
-# so the note is the same for a son or a daughter: adoption, placement (foster care).
+# so the note is the same for a son or a daughter: adoption, accueil (foster care, as in
+# famille d’accueil).
 adopted = "(adoption)"
-foster = "(placement)"
+foster = "(accueil)"
 
 [labels]
 # Partner paired with the initial pedigree root's marriage, with the French space
 # before the colon.
 spouse = "conjoint :"
-# Box labels, before each value: naissance, mariage, décès; each place line reads
-# "à …".
+# Box labels, before each value: naissance, mariage and décès, written out so it is
+# not read as the month déc.; each place line reads "à …".
 birth = "naiss."
 birth_place = "à"
 marriage = "mar."
 marriage_place = "à"
-death = "déc."
+death = "décès"
 death_place = "à"
 
 # Stand-ins for a missing birth or death: baptême (christening or baptism), inhumation
@@ -119,17 +132,34 @@ cremation = "crém."
 cremation_place = "à"
 
 [dates]
-# ABT → vers, EST → estimé, CAL → calculé.
+# ABT → vers, EST → estim. (estimée), CAL → calc. (calculée): abbreviated, so they agree
+# with any event.
 about = "vers"
-estimated = "estimé"
-calculated = "calculé"
+estimated = "estim."
+calculated = "calc."
 before = "avant"
 after = "après"
-# A FROM date with no TO, and a TO date with no FROM.
+# A FROM date with no TO, and a TO date with no FROM: "à partir de 1960", "jusqu’en mars
+# 1960".
 from = "à partir de"
-to = "jusqu’à"
+to = "jusqu’en"
 # Between the two dates of a range: 1622–1632.
 range = "–"
+
+[dates.with_day]
+# Before a date with a day the article comes in: "vers le 3 mars 1850", "avant le 1er
+# janv. 1900", "à partir du 3 mars", "jusqu’au 3 mars".
+about = "vers le"
+before = "avant le"
+after = "après le"
+from = "à partir du"
+to = "jusqu’au"
+
+[dates.rewrite]
+# de elides before a month that starts with a vowel: "à partir d’avr. 1960".
+"de avr." = "d’avr."
+"de août" = "d’août"
+"de oct." = "d’oct."
 
 [years]
 # Fan stand-ins use the box labels: baptême, inhumation and crémation.
@@ -141,21 +171,24 @@ cremation = "crém. {y}"
 # A death without a readable year: † is the same for anyone, as décédé is not.
 deceased = "†"
 
-# Short fan year words: v. (vers: approximate, estimated or calculated), av. (avant:
-# before or TO), apr. (après: after or FROM), entre (before a range's first year).
-# {y} is the year, including both readings of a double year.
+# Short fan year words: v. (vers: approximate, estimated or calculated, and the first
+# year of a range, where entre would read as the span to the death year), av. (avant:
+# before or TO), apr. (après: after or FROM). {y} is the year, including both readings
+# of a double year.
 about = "v. {y}"
 before = "av. {y}"
 after = "apr. {y}"
-between = "entre {y}"
+between = "v. {y}"
 
 [sort]
-# The index order of French lists. The printed names do not change. Accents and ç sort
-# as their base letters, and the ligatures œ and æ as oe and ae, so Œuvray files with
-# Oeuvray. The particle de, and d’ before a vowel, are skipped when a surname is sorted;
-# the article and the contracted forms are kept: "de Gaulle" files under G,
-# "d’Artagnan" under A, "de La Fontaine" under L and "du Bellay" under D. Punctuation
-# is dropped from the sort key first.
+# The index order of French lists (AFNOR NF Z44-061). Accents and ç sort as their base
+# letters, and the ligatures œ and æ as oe and ae, so Œuvray files with Oeuvray. The
+# particle de, and d’ before a vowel, are skipped when a surname is sorted; the article
+# and the contracted forms are kept: "de Gaulle" files under G, "d’Artagnan" under A,
+# "de La Fontaine" under L and "du Bellay" under D. The skipped particles print in
+# small letters (Charles de GAULLE) and, in the index, after the given name (GAULLE,
+# Charles de). Punctuation is dropped from the sort key first, and a hyphen reads as a
+# space, so Saint-Exupéry files before Sainte-Beuve.
 after_z = []
 ignore_particles = ["de", "d’"]
 mc_as_mac = false

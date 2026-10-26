@@ -1,0 +1,132 @@
+# Kincade web page language file: German.
+#
+# This file holds the browser page's own wording, with the same keys as
+# web/lang/en.toml (see that file for what each table and key words). It
+# addresses the reader as formal ("Sie").
+
+[page]
+title = "Kincade — Ahnentafeln"
+tagline = "Ahnentafel oder Fächerahnentafel als PDF aus einer GEDCOM-Datei erstellen"
+version = "Version {version}"
+language = "Sprache der Seite"
+languageName = "Deutsch"
+privacy = "Ihre GEDCOM-Datei wird in diesem Browser gelesen und nie hochgeladen."
+
+[status]
+loading = "Kincade wird geladen…"
+ready = "Bereit"
+retry = "Erneut versuchen"
+
+[step]
+pyodide = "Laden von Pyodide"
+micropip = "Laden von micropip"
+reportlab = "Installieren von reportlab"
+kincade = "Installieren von Kincade"
+fonts = "Laden der Schriftarten"
+start = "Starten von Kincade"
+
+[host]
+site = "diese Website"
+browser = "Browser"
+
+[init]
+failed = "{step} fehlgeschlagen ({host}): {message}"
+downloadHint = "Laden Sie die Seite neu. Schlägt der Download weiterhin fehl, melden Sie diese URL dem Betreiber der Website."
+
+[error]
+download = "Download fehlgeschlagen: HTTP {status} für {url}"
+wheelMismatch = "HTML-Seite und Kincade-Wheel stammen möglicherweise aus verschiedenen zwischengespeicherten Builds. Laden Sie die Seite neu, um passende Dateien herunterzuladen."
+notReady = "Kincade ist nicht bereit. Laden Sie die Seite neu und versuchen Sie es noch einmal."
+noPeople = "Diese GEDCOM-Datei enthält keine Personen."
+open = "Der Stammbaum konnte nicht geöffnet werden."
+search = "Der Stammbaum konnte nicht durchsucht werden."
+rootMetadata = "Die Angaben zur Ausgangsperson konnten nicht gelesen werden."
+render = "Das PDF konnte nicht erstellt werden."
+read = "Die Datei {name} konnte nicht gelesen werden: {error}"
+details = "Details"
+
+[tree]
+heading = "Stammbaum"
+sample = "Beispiel ansehen"
+choose = "Datei auswählen"
+hint = "GEDCOM-Datei auswählen oder hierher ziehen (5.5, 5.5.1 oder 7.0)"
+input = "GEDCOM-Datei auswählen"
+summary = { one = "{name}: {count} Person", other = "{name}: {count} Personen" }
+
+[root]
+heading = "Ausgangsperson"
+search = "Nach Name oder Datensatz-ID suchen"
+openList = "Personenliste öffnen"
+clear = "Auswahl aufheben"
+matching = "Passende Personen"
+choose = "Wählen Sie eine Ausgangsperson aus."
+prompt = "Wählen Sie eine Ausgangsperson aus, um die Tafel anzuzeigen."
+selected = "Ausgangsperson: {id}, {name}"
+searching = "Suche läuft…"
+unavailable = "Suche nicht verfügbar."
+matches = { one = "{count} Treffer", other = "{count} Treffer" }
+shown = "{shown} von {total} angezeigt"
+
+[family]
+label = "Ehe der Ausgangsperson"
+first = "Erste erfasste Ehe"
+loading = "Ehen werden geladen…"
+unknownSpouse = "Partner unbekannt"
+
+[options]
+heading = "Optionen"
+chart = "Tafelart"
+pedigree = "Ahnentafel"
+fan = "Fächerahnentafel"
+generations = "Generationen"
+allGenerations = "Alle Generationen"
+custom = "Andere Anzahl…"
+paper = "Papier"
+portrait = "Hochformat"
+landscape = "Querformat"
+letter = "US-Letter"
+tabloid = "US-Tabloid"
+largePrint = "Großdruck"
+ink = "Farbmodus"
+color = "Farbig"
+grayscale = "Graustufen"
+bw = "Schwarzweiß"
+hideLiving = "Lebende Personen ausblenden"
+more = "Weitere Optionen"
+chartLanguage = "Sprache der Tafel"
+customGenerations = "Anzahl der Generationen"
+all = "alle"
+generationsHelp = "Für alle Generationen leer lassen."
+generationsError = "Geben Sie eine ganze Zahl ab 1 ein oder lassen Sie das Feld für alle Generationen leer."
+generationsInvalid = "Geben Sie eine ganze Zahl ab 1 ein oder lassen Sie das Feld leer."
+emptyBoxes = "Unbekannte Vorfahren weglassen"
+uppercase = "Nachname in GROSSBUCHSTABEN"
+showIds = "Datensatz-IDs anzeigen"
+adoptive = "Adoptiv- und Pflegeeltern anzeigen"
+standins = "Taufe und Bestattung anzeigen, wenn Geburt oder Tod fehlen"
+shortenPlaces = "Lange Ortsangaben kürzen"
+shadow = "Schlagschatten"
+title = "Titel"
+rootName = "Name der Ausgangsperson"
+footer = "Fußzeile"
+noFooter = "Keine Fußzeile"
+pageNumbers = "Seitenzahlen"
+index = "Namensregister"
+
+[pdf]
+heading = "PDF"
+download = "PDF herunterladen"
+open = "PDF öffnen"
+preview = "PDF-Vorschau"
+rendering = "Wird erstellt…"
+builtinFonts = "Standardschriftarten verwendet"
+bytes = { one = "{size} Byte", other = "{size} Byte" }
+kb = "{size} KB"
+mb = "{size} MB"
+pedigree = "{charts}, {indexPages}, {pages}"
+charts = { one = "{count} Tafel", other = "{count} Tafeln" }
+indexPages = { one = "{count} Registerseite", other = "{count} Registerseiten" }
+pages = { one = "{count} Seite", other = "{count} Seiten" }
+fan = "Fächerahnentafel, {generations}, {people}"
+generations = { one = "{count} Generation", other = "{count} Generationen" }
+people = { one = "{count} Person", other = "{count} Personen" }

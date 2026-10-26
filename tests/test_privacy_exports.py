@@ -38,7 +38,11 @@ def private_tree():
 @pytest.mark.parametrize("chart", ["pedigree", "fan"])
 @pytest.mark.parametrize(
     "lang,label",
-    [(None, "Living"), ("de", "Lebend"), ({"living_name": "Private"}, "Private")],
+    [
+        (None, "Living"),
+        ("de", "Lebende Person"),
+        ({"living_name": "Private"}, "Private"),
+    ],
 )
 def test_private_pdf_redacts_identity_in_text_and_metadata(chart, lang, label):
     tree = private_tree()
@@ -83,11 +87,16 @@ def test_private_pdf_redacts_identity_in_text_and_metadata(chart, lang, label):
 
 
 @pytest.mark.parametrize(
-    "chart,suffix", [("pedigree", "cascading pedigree"), ("fan", "fan chart")]
+    "chart,lang,filename",
+    [
+        ("pedigree", None, "Living cascading pedigree.pdf"),
+        ("fan", None, "Living fan chart.pdf"),
+        ("pedigree", "de", "Ahnentafel Lebende Person.pdf"),
+        ("fan", "de", "Fächerahnentafel Lebende Person.pdf"),
+    ],
 )
-@pytest.mark.parametrize("lang,label", [(None, "Living"), ("de", "Lebend")])
 def test_cli_default_filename_redacts_living_root(
-    tmp_path, capsys, chart, suffix, lang, label
+    tmp_path, capsys, chart, lang, filename
 ):
     path = tmp_path / "private.ged"
     path.write_bytes(ged("0 @I1@ INDI", "1 NAME Jane /Secret/"))
@@ -97,7 +106,7 @@ def test_cli_default_filename_redacts_living_root(
     if lang:
         args.extend(("--lang", lang))
     assert main(args) == 0
-    assert (tmp_path / f"{label} {suffix}.pdf").exists()
+    assert (tmp_path / filename).exists()
     assert "Jane" not in capsys.readouterr().err
 
 

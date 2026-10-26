@@ -1,0 +1,132 @@
+# Kincade web page language file: Spanish.
+#
+# This file holds the browser page's own wording, with the same keys as
+# web/lang/en.toml (see that file for what each table and key words). It
+# addresses the reader as formal ("usted").
+
+[page]
+title = "Kincade — Árboles genealógicos"
+tagline = "Cree en PDF un árbol de antepasados o un árbol en abanico a partir de un archivo GEDCOM"
+version = "Versión {version}"
+language = "Idioma de la página"
+languageName = "Español"
+privacy = "Su archivo GEDCOM se lee en este navegador y nunca se envía a ningún servidor."
+
+[status]
+loading = "Cargando Kincade…"
+ready = "Listo"
+retry = "Reintentar"
+
+[step]
+pyodide = "Cargando Pyodide"
+micropip = "Cargando micropip"
+reportlab = "Instalando reportlab"
+kincade = "Instalando Kincade"
+fonts = "Cargando fuentes"
+start = "Iniciando Kincade"
+
+[host]
+site = "este sitio"
+browser = "navegador"
+
+[init]
+failed = "{step}: error ({host}): {message}"
+downloadHint = "Vuelva a cargar la página. Si la descarga sigue fallando, comunique esta URL al responsable del sitio."
+
+[error]
+download = "No se pudo descargar {url}: HTTP {status}"
+wheelMismatch = "Puede que el HTML y el paquete wheel de Kincade procedan de compilaciones distintas guardadas en caché. Vuelva a cargar la página para descargar archivos que coincidan."
+notReady = "Kincade no está listo. Vuelva a cargar la página e inténtelo de nuevo."
+noPeople = "Este archivo GEDCOM no contiene personas."
+open = "No se pudo abrir el árbol familiar."
+search = "No se pudo buscar en el árbol familiar."
+rootMetadata = "No se pudieron leer los datos de la persona de partida."
+render = "No se pudo crear el PDF."
+read = "No se pudo leer {name}: {error}"
+details = "Detalles"
+
+[tree]
+heading = "Árbol familiar"
+sample = "Ver un ejemplo"
+choose = "Elegir archivo"
+hint = "Elija o arrastre aquí un archivo GEDCOM (5.5, 5.5.1 o 7.0)"
+input = "Elegir archivo GEDCOM"
+summary = { one = "{name}: {count} persona", other = "{name}: {count} personas" }
+
+[root]
+heading = "Persona de partida"
+search = "Buscar por nombre o ID de registro"
+openList = "Abrir la lista de personas"
+clear = "Quitar la persona elegida"
+matching = "Personas que coinciden"
+choose = "Elija una persona de partida."
+prompt = "Elija una persona de partida para ver el gráfico."
+selected = "Persona de partida: {id}, {name}"
+searching = "Buscando…"
+unavailable = "Búsqueda no disponible."
+matches = { one = "{count} coincidencia", other = "{count} coincidencias" }
+shown = "Se muestran {shown} de {total}"
+
+[family]
+label = "Matrimonio de la persona de partida"
+first = "Primer matrimonio registrado"
+loading = "Cargando matrimonios…"
+unknownSpouse = "Cónyuge sin identificar"
+
+[options]
+heading = "Opciones"
+chart = "Gráfico"
+pedigree = "Antepasados"
+fan = "Abanico"
+generations = "Generaciones"
+allGenerations = "Todas las generaciones"
+custom = "Otro número…"
+paper = "Papel"
+portrait = "vertical"
+landscape = "horizontal"
+letter = "Carta"
+tabloid = "Tabloide"
+largePrint = "Letra grande"
+ink = "Tinta"
+color = "Color"
+grayscale = "Escala de grises"
+bw = "Blanco y negro"
+hideLiving = "Ocultar a las personas vivas"
+more = "Más opciones"
+chartLanguage = "Idioma del gráfico"
+customGenerations = "Número de generaciones"
+all = "todas"
+generationsHelp = "Déjelo vacío para incluir todas las generaciones."
+generationsError = "Escriba un número entero a partir de 1, o déjelo vacío para incluir todas las generaciones."
+generationsInvalid = "Escriba un número entero a partir de 1, o déjelo vacío."
+emptyBoxes = "Omitir antepasados desconocidos"
+uppercase = "Apellidos en MAYÚSCULAS"
+showIds = "Mostrar los ID de registro"
+adoptive = "Incluir padres adoptivos y de acogida"
+standins = "Usar bautismos y sepulturas cuando falten nacimientos y fallecimientos"
+shortenPlaces = "Acortar lugares largos"
+shadow = "Sombra paralela"
+title = "Título"
+rootName = "Nombre de la persona de partida"
+footer = "Pie de página"
+noFooter = "Sin pie de página"
+pageNumbers = "Números de página"
+index = "Índice onomástico"
+
+[pdf]
+heading = "PDF"
+download = "Descargar PDF"
+open = "Abrir PDF"
+preview = "Vista previa del PDF"
+rendering = "Generando el PDF…"
+builtinFonts = "Se usaron las fuentes integradas"
+bytes = { one = "{size} byte", other = "{size} bytes" }
+kb = "{size} KB"
+mb = "{size} MB"
+pedigree = "{charts}, {indexPages}, {pages}"
+charts = { one = "{count} cuadro", other = "{count} cuadros" }
+indexPages = { one = "{count} página de índice", other = "{count} páginas de índice" }
+pages = { one = "{count} página", other = "{count} páginas" }
+fan = "árbol en abanico, {generations}, {people}"
+generations = { one = "{count} generación", other = "{count} generaciones" }
+people = { one = "{count} persona", other = "{count} personas" }

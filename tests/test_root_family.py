@@ -212,7 +212,7 @@ def test_spouse_uses_recorded_case_and_custom_language(marriages):
 
 
 def test_spouse_label_is_translated_in_german(marriages):
-    assert "Partner: First McCLURE" in drawn(render(marriages, "R", lang="de"))
+    assert "Ehe mit: First McCLURE" in drawn(render(marriages, "R", lang="de"))
 
 
 def test_override_leaves_continuations_ancestors_and_index_membership_unchanged(

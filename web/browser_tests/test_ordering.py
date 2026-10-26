@@ -99,6 +99,7 @@ def test_one_render_in_flight_exact_latest_snapshot_and_chart_staleness(app):
         "preserve_case": False,
         "title": None,
         "footer": None,
+        "lang": "en",
     }
     expect(app.page.locator("#pdf-summary")).to_contain_text("fan chart, 4 generations")
     assert len(app.pdf().pages) == 1

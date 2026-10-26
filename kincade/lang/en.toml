@@ -41,9 +41,6 @@ footer_blank = "Created using Kincade"
 # and {year} are numbers as text; {month} is from months.short.
 date_format = "{day} {month} {year}"
 
-# The first day of a month, in place of the number 1 wherever a date has a day. French
-# writes 1er (1er mars 1903) and Italian 1º. No placeholders.
-day_one = "1"
 
 # The chart label at the top right. {n} is the chart number.
 chart_label = "Chart {n}"
@@ -70,9 +67,23 @@ page_number = "Page {page} of {pages}"
 # type, so keep it short.
 record_id = "[{id}]"
 
+# The names of the PDFs Kincade saves when no -o or output path is given, before
+# .pdf. {name} is the root person's name, made safe for a file name; characters
+# a file name cannot hold become _.
+file_name = "{name} cascading pedigree"
+fan_file_name = "{name} fan chart"
+
+# The name of the blank chart's PDF (--blank): no person, so no placeholder.
+blank_file_name = "Blank cascading pedigree"
+
 [months]
 # Twelve short month names, January first. Used for GEDCOM dates and the footer date.
 short = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+[days]
+# The days of the month a date writes otherwise than as their number, each as
+# day = "text": French lists 1 = "1er" (1er mars 1903). A day not listed prints as
+# its number, so English lists none. No placeholders.
 
 [index]
 # The title of the name index pages.
@@ -82,6 +93,10 @@ title = "Index"
 # continuation line: how to read the numbers after each name. An empty string leaves it
 # off.
 legend = "The numbers after each name indicate the chart number and box number. 6-1 is box 1 on chart 6."
+
+# Where a person is drawn, after the name and years; several are joined by ", ".
+# {chart} is the chart number and {pos} the box number on it.
+reference = "{chart}-{pos}"
 
 # The birth-year piece of an index entry. {birth} is the year.
 born = "b. {birth}"
@@ -167,6 +182,16 @@ to = "to"
 # Between the two dates of a range (BET a AND b, FROM a TO b).
 range = "-"
 
+[dates.with_day]
+# The words above, by key, as they read before a date with a day, where a language
+# words them otherwise: French lists before = "avant le" ("avant le 3 mars 1990", but
+# "avant 1990"). A key not listed uses its word above, so English lists none.
+
+[dates.rewrite]
+# Phrases a worded date replaces, matched as whole words, such as the elisions of a
+# language before a vowel: Italian lists "dal 8" = "dall’8" ("dall’8 mar. 1910"). No
+# placeholders. English lists none.
+
 [years]
 # The fan's stand-in year pieces. {y} is the year, including any date word.
 christening = "chr {y}"
@@ -185,13 +210,12 @@ after = "aft {y}"
 between = "bet {y}"
 
 [sort]
-# How the name index is ordered. These settings change only the order of the entries,
-# never the text printed: surnames print in capitals (VON DER HEIDE) by default,
-# while preserve_case keeps their recorded case. The English defaults sort
-# alphabetically: surname, then given name, birth year and suffix. Before any of these
-# settings apply, punctuation is dropped from the sort key (letters, digits and spaces
-# only), so O'Brien files as obrien. The README section "Index sort order" explains
-# each setting and the order of the steps.
+# How the name index is ordered. These settings change the order of the entries, not
+# their spelling. The English defaults sort alphabetically: surname, then given name,
+# birth year and suffix. Before any of these settings apply, punctuation is dropped
+# from the sort key and a hyphen reads as a space, so O'Brien files as obrien and
+# Saint-Exupéry word by word, as "saint exupery". The README section "Index sort order"
+# explains each setting and the order of the steps.
 
 # Letters that sort after "z", in the order listed. A letter here is not folded to its
 # base letter (so å does not file under a). Each item is one letter. Examples: Swedish
@@ -200,16 +224,20 @@ between = "bet {y}"
 after_z = []
 
 # Surname particles that are skipped at the start of a surname when the index is sorted.
-# Each is a whole word, matched without regard to case, and several in a row are all
-# skipped: with ["von", "der"], "von der Heide" files under H.
-# A surname that is only a particle ("Van") is never stripped, and a given name is never
-# affected. The printed name keeps its particle. A particle that ends in an apostrophe
-# (' or ’), such as d’, is elided: it is skipped where it is joined to the front of the
-# surname, so with ["d’"] d’Artagnan files under A. German (DIN 5007-2) uses ["von",
-# "zu", "vom", "zum", "van", "de", "der", "den", "dem"], so van Gogh files under G,
-# between Goethe and Gogol. Dutch lists often skip van, de, der, den, ten, ter, te and
-# het. French skips ["de", "d’"] and keeps le, la, du and des: de Gaulle files under G,
-# du Bellay under D.
+# Each is a word or a phrase of words, matched without regard to case, longest phrase
+# first, and several in a row are all skipped: with ["von", "der"], "von der Heide"
+# files under H. A surname that is only a particle ("Van") is never stripped, and a
+# given name is never affected. A particle that ends in an apostrophe (' or ’), such as
+# d’, is elided: it is skipped where it is joined to the front of the surname, so with
+# ["d’"] d’Artagnan files under A.
+# The particles also print as a language writes them: they keep their recorded case when
+# surnames print in capitals (Anna von der HEIDE), and the index prints them after the
+# given name, where the entry files (HEIDE, Anna von der).
+# German (DIN 5007-2) uses ["von", "zu", "vom", "zum", "van", "de", "der", "den",
+# "dem", ...], so van Gogh files under G, between Goethe and Gogol. French skips ["de",
+# "d’"] and keeps le, la, du and des: de Gaulle files under G, du Bellay under D.
+# Spanish skips ["de", "del", "de la", "de las", "de los"], so an article is skipped
+# only after de: de la Fuente files under F, Las Heras under L.
 ignore_particles = []
 
 # true sorts a surname that begins with "Mc" as if it began with "Mac", the English

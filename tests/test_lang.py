@@ -27,12 +27,16 @@ from pdfread import drawn
 ENGLISH_FOOTER = "Created 10 Oct 2026 using Kincade"
 
 
+TABLE_LEAVES = ("days.", "dates.with_day.", "dates.rewrite.", "sort.expand.")
+
+
 def leaves(node, prefix=""):
-    """Dotted paths of every leaf (a string, a list of strings, or the sort.expand
-    table) of a nested strings dict.
+    """Dotted paths of every leaf (a string, a list of strings, or a table whose keys
+    are data: days, dates.with_day, dates.rewrite, sort.expand) of a nested strings
+    dict.
     """
-    # expand's keys are data, so the table is one leaf
-    if isinstance(node, dict) and prefix != "sort.expand.":
+    # the keys of these tables are data, so each table is one leaf
+    if isinstance(node, dict) and prefix not in TABLE_LEAVES:
         return {
             p for key, value in node.items() for p in leaves(value, f"{prefix}{key}.")
         }
@@ -56,7 +60,10 @@ def test_default_strings_are_the_english_wording():
     assert d["meta_title"] == "{title} — {name}"
     assert d["footer"] == "Created {date} using Kincade"
     assert d["date_format"] == "{day} {month} {year}"
-    assert d["day_one"] == "1"
+    assert d["days"] == {}
+    assert d["file_name"] == "{name} cascading pedigree"
+    assert d["fan_file_name"] == "{name} fan chart"
+    assert d["blank_file_name"] == "Blank cascading pedigree"
     assert d["chart_label"] == "Chart {n}"
     assert (
         d["continuation"]
@@ -91,6 +98,7 @@ def test_default_strings_are_the_english_wording():
         "buried": "bur. {death}",
         "cremated": "crem. {death}",
         "legend": "The numbers after each name indicate the chart number and box number. 6-1 is box 1 on chart 6.",
+        "reference": "{chart}-{pos}",
     }
     assert d["labels"] == {
         "birth": "b.",
@@ -116,6 +124,8 @@ def test_default_strings_are_the_english_wording():
         "from": "from",
         "to": "to",
         "range": "-",
+        "with_day": {},
+        "rewrite": {},
     }
     assert d["years"] == {
         "christening": "chr {y}",
@@ -131,11 +141,11 @@ def test_default_strings_are_the_english_wording():
 
 def test_german_fan_title_and_year_words():
     strings = kincade.lang.load_strings("de")
-    assert strings["fan_title"] == "{name} — Fächerahnentafel"
+    assert strings["fan_title"] == "Fächerahnentafel — {name}"
     assert strings["years"] == {
         "christening": "get. {y}",
         "burial": "begr. {y}",
-        "cremation": "eingeäsch. {y}",
+        "cremation": "krem. {y}",
         "deceased": "verstorben",
         "about": "um {y}",
         "before": "vor {y}",
@@ -580,8 +590,8 @@ DE_DATES = [
     ("CAL 1755", "err. 1755"),
     ("BEF 1800", "vor 1800"),
     ("AFT 1800", "nach 1800"),
-    ("BET 1622 AND 1632", "1622–1632"),
-    ("FROM 1622 TO 1632", "1622–1632"),
+    ("BET 1622 AND 1632", "1622 – 1632"),
+    ("FROM 1622 TO 1632", "1622 – 1632"),
     ("FROM 1622", "ab 1622"),
     ("TO 1632", "bis 1632"),
     ("", ""),
@@ -626,7 +636,7 @@ def test_german_index_years_and_locators():
         lambda pid: False,
         exclude_private=False,
         strings=kincade.lang.load_strings("de"),
-    ) == ["DOE, Jane (* 1850, † 1920), 1-1"]
+    ) == ["DOE, Jane (* 1850, † 1920), 1/1"]
     assert kincade.pdf.build_index(
         tree, charts, lambda pid: False, exclude_private=False
     ) == ["DOE, Jane (b. 1850 – d. 1920), 1-1"]
@@ -661,7 +671,7 @@ ROMANCE_RENDER = {
         "naiss. 14 févr. 1980",
         "à Springfield, Illinois",
         "naiss. 3 mars 1950",
-        "déc. 2 avr. 2020",
+        "décès 2 avr. 2020",
         "à Dayton, Ohio",
         "Le n° 1 de ce tableau correspond au n° 8 du tableau 1.",
         "ASHFORD, Jane (° 1980), 1-1",
@@ -674,10 +684,10 @@ ROMANCE_RENDER = {
         "Creato in data 10 ott. 2026 con Kincade",
         "Pagina 1 di 6",
         "n. 14 feb. 1980",
-        "a Springfield, Illinois",
+        "Springfield, Illinois",
         "n. 3 mar. 1950",
         "m. 2 apr. 2020",
-        "a Dayton, Ohio",
+        "Dayton, Ohio",
         "Il n. 1 di questa tavola corrisponde al n. 8 della tavola 1.",
         "ASHFORD, Jane (n. 1980), 1-1",
     ],
@@ -704,13 +714,47 @@ ROMANCE_DATES = [
     ("24 DEC 1900", "24 dic. 1900", "24 déc. 1900", "24 dic. 1900"),
     ("SEP 1917", "sept. 1917", "sept. 1917", "set. 1917"),
     ("ABT 1755", "hacia 1755", "vers 1755", "ca. 1755"),
-    ("EST 1755", "est. 1755", "estimé 1755", "stim. 1755"),
-    ("CAL 1755", "calc. 1755", "calculé 1755", "calc. 1755"),
+    ("EST 1755", "est. 1755", "estim. 1755", "stim. 1755"),
+    ("CAL 1755", "calc. 1755", "calc. 1755", "calc. 1755"),
     ("BEF 1800", "antes de 1800", "avant 1800", "ante 1800"),
     ("AFT 1800", "después de 1800", "après 1800", "post 1800"),
     ("BET 1622 AND 1632", "1622–1632", "1622–1632", "1622–1632"),
     ("FROM 1622", "desde 1622", "à partir de 1622", "dal 1622"),
-    ("TO 1632", "hasta 1632", "jusqu’à 1632", "fino al 1632"),
+    ("TO 1632", "hasta 1632", "jusqu’en 1632", "fino al 1632"),
+    ("JUL 1900", "jul. 1900", "juill. 1900", "lug. 1900"),
+    # before a day: French takes the article, Italian elides before a vowel
+    (
+        "BEF 3 MAR 1990",
+        "antes de 3 mar. 1990",
+        "avant le 3 mars 1990",
+        "ante 3 mar. 1990",
+    ),
+    (
+        "ABT 1 JAN 1900",
+        "hacia 1 ene. 1900",
+        "vers le 1er janv. 1900",
+        "ca. 1º gen. 1900",
+    ),
+    (
+        "FROM 8 MAR 1910",
+        "desde 8 mar. 1910",
+        "à partir du 8 mars 1910",
+        "dall’8 mar. 1910",
+    ),
+    (
+        "TO 11 APR 1980",
+        "hasta 11 abr. 1980",
+        "jusqu’au 11 avr. 1980",
+        "fino all’11 apr. 1980",
+    ),
+    ("FROM APR 1960", "desde abr. 1960", "à partir d’avr. 1960", "dall’apr. 1960"),
+    ("TO OCT 1960", "hasta oct. 1960", "jusqu’en oct. 1960", "fino all’ott. 1960"),
+    (
+        "FROM 18 MAR 1910",
+        "desde 18 mar. 1910",
+        "à partir du 18 mars 1910",
+        "dal 18 mar. 1910",
+    ),
 ]
 
 
@@ -731,7 +775,7 @@ def test_spanish_french_and_italian_dates(raw, es, fr, it):
         ("it", "Creato in data 1º mar. 2026 con Kincade"),
     ],
 )
-def test_the_first_of_the_month_in_the_footer_is_the_languages_day_one(
+def test_the_first_of_the_month_in_the_footer_is_written_as_the_language_writes_it(
     pedigree, lang, footer
 ):
     text = drawn(
@@ -746,18 +790,90 @@ def test_the_first_of_the_month_in_the_footer_is_the_languages_day_one(
     assert footer in text
 
 
-def test_day_one_comes_from_the_strings_argument_and_takes_no_placeholders():
-    s = kincade.lang.load_strings(None, {"day_one": "first"})
-    assert kincade.lang.format_date(parse_date("1 JAN 1917"), s) == "first Jan 1917"
-    assert kincade.lang.format_date(parse_date("11 JAN 1917"), s) == "11 Jan 1917"
+def test_the_days_table_writes_the_days_it_lists_and_adds_to_the_language_below():
+    s = kincade.lang.load_strings("fr", {"days": {2: "2e", "3": "3e"}})
+    assert s["days"] == {"1": "1er", "2": "2e", "3": "3e"}
+    assert kincade.lang.format_date(parse_date("1 JAN 1917"), s) == "1er janv. 1917"
+    assert kincade.lang.format_date(parse_date("2 JAN 1917"), s) == "2e janv. 1917"
+    assert kincade.lang.format_date(parse_date("11 JAN 1917"), s) == "11 janv. 1917"
+    assert kincade.lang.format_date(parse_date("BEF 1 JAN 1917"), s) == (
+        "avant le 1er janv. 1917"
+    )
+
+
+@pytest.mark.parametrize(
+    "dates",
+    [
+        {"with_day": {"range": "au"}},
+        {"with_day": {"before": ""}},
+        {"with_day": {"before": "{date}"}},
+        {"with_day": "avant le"},
+        {"rewrite": {"": "x"}},
+        {"rewrite": {"dal 8": 8}},
+        {"rewrite": {"dal 8": "{day}"}},
+        {"rewrite": ["dal 8"]},
+    ],
+)
+def test_bad_date_tables_are_errors(dates):
     with pytest.raises(kincade.lang.LangError):
-        kincade.lang.load_strings(None, {"day_one": "{day}"})
+        kincade.lang.load_strings(None, {"dates": dates})
+
+
+def test_date_rewrites_match_whole_words_only():
+    s = kincade.lang.load_strings(None, {"dates": {"rewrite": {"from 8": "from8"}}})
+    assert (
+        kincade.lang.format_date(parse_date("FROM 8 MAR 1910"), s) == "from8 Mar 1910"
+    )
+    assert kincade.lang.format_date(parse_date("FROM 1880"), s) == "from 1880"
+
+
+def test_the_index_reference_is_the_languages_template(pedigree):
+    text = drawn(
+        render(pedigree, generations=1, lang={"index": {"reference": "{chart}:{pos}"}})
+    )
+    assert any(t.startswith("ASHFORD, Jane") and t.endswith(", 1:1") for t in text)
+
+
+@pytest.mark.parametrize(
+    "lang,box,entry",
+    [
+        (None, "Anna VON DER HEIDE", "VON DER HEIDE, Anna"),
+        ("de", "Anna von der HEIDE", "HEIDE, Anna von der"),
+    ],
+)
+def test_skipped_particles_print_in_recorded_case_and_after_the_given_name(
+    lang, box, entry
+):
+    tree = read_gedcom(ged("0 @I1@ INDI", "1 NAME Anna /von der Heide/"))
+    text = drawn(render(tree, lang=lang))
+    assert box in text
+    assert any(t.startswith(entry + ",") for t in text)
+    # preserve_case keeps every word as recorded
+    assert "Anna von der Heide" in drawn(render(tree, lang=lang, preserve_case=True))
+
+
+@pytest.mark.parametrize(
+    "days",
+    [
+        "1er",
+        {"0": "0"},
+        {"32": "32e"},
+        {"first": "1er"},
+        {True: "1er"},
+        {"1": ""},
+        {"1": 1},
+        {"1": "{day}"},
+    ],
+)
+def test_a_days_table_needs_days_from_1_to_31_with_plain_text(days):
+    with pytest.raises(kincade.lang.LangError):
+        kincade.lang.load_strings(None, {"days": days})
 
 
 @pytest.mark.parametrize(
     "lang,expected",
     [
-        ("es", "ASHFORD, Ann (baut. 1750, sep. 1800), 1-1"),
+        ("es", "ASHFORD, Ann (baut. 1750, sepult. 1800), 1-1"),
         ("fr", "ASHFORD, Ann (bapt. 1750, inh. 1800), 1-1"),
         ("it", "ASHFORD, Ann (batt. 1750, sep. 1800), 1-1"),
     ],
@@ -778,7 +894,9 @@ def test_spanish_french_and_italian_stand_ins_in_boxes_and_index(lang, expected)
     text = drawn(render(tree, lang=lang))
     christening = strings["labels"]["christening"]
     place = strings["labels"]["christening_place"]
-    assert f"{christening} 1750" in text and f"{place} Little Hall" in text
+    # an empty place label leaves the place bare
+    assert f"{christening} 1750" in text
+    assert (f"{place} Little Hall" if place else "Little Hall") in text
     assert f"{strings['labels']['burial']} 1800" in text
     assert expected in text
 
@@ -842,27 +960,37 @@ def test_cli_bad_language_file_exits_1(tmp_path, capsys):
     assert "title must be a string" in capsys.readouterr().err
 
 
-def test_default_output_name_stays_english_under_a_language(tmp_path, pedigree):
-    assert (
-        kincade.cli.main(
-            [
-                str(FIX / "pedigree.ged"),
-                "--root",
-                "@I1@",
-                "--generations",
-                "1",
-                "--lang",
-                "de",
-            ]
-        )
-        == 0
-    )
-    assert (
-        tmp_path
-        / kincade.cli.default_output_name(
-            kincade.lang.display_name(pedigree.people["I1"])
-        )
-    ).is_file()
+@pytest.mark.parametrize(
+    "chart,words", [([], "Ahnentafel"), (["--fan"], "Fächerahnentafel")]
+)
+def test_the_default_output_is_named_by_the_languages_file_name(
+    tmp_path, pedigree, chart, words
+):
+    args = [str(FIX / "pedigree.ged"), "--root", "@I1@", "--generations", "2"]
+    assert kincade.cli.main([*args, "--lang", "de", *chart]) == 0
+    name = kincade.lang.display_name(pedigree.people["I1"], preserve_case=True)
+    assert [path.name for path in tmp_path.glob("*.pdf")] == [f"{words} {name}.pdf"]
+
+
+def test_the_blank_chart_is_named_by_the_languages_blank_file_name(tmp_path):
+    assert kincade.cli.main(["--blank", "--lang", "fr"]) == 0
+    assert [path.name for path in tmp_path.glob("*.pdf")] == [
+        "Arbre d'ascendance vierge.pdf"
+    ]
+
+
+@pytest.mark.parametrize(
+    "template,name,expected",
+    [
+        ("{name} Tafel", "Zoë/Wilks", "Zoë_Wilks Tafel.pdf"),
+        ("{name} Tafel", "..", "Tafel.pdf"),
+        ("Ahnen: {name}", "Ann", "Ahnen_ Ann.pdf"),
+        ("{name}", "", "Kincade.pdf"),
+    ],
+)
+def test_a_file_name_template_is_made_safe_around_the_name(template, name, expected):
+    strings = kincade.lang.load_strings(None, {"file_name": template})
+    assert kincade.cli.default_output_name(name, strings) == expected
 
 
 # ----------------------------------------------------------------

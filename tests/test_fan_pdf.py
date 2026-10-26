@@ -64,7 +64,7 @@ def test_overrides_no_footer_and_german_title():
     assert not any(
         t.startswith("Created") for t, _ in text_objects(render(footer=False))
     )
-    assert "Jane Doe — Fächerahnentafel" in [
+    assert "Fächerahnentafel — Jane Doe" in [
         t for t, _ in text_objects(render(lang="de"))
     ]
 

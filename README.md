@@ -38,6 +38,12 @@ and download the PDF. Your family data stays in your browser.
 For pedigrees, people with multiple marriages have a **Root marriage** dropdown
 below their name so you can choose which spouse and marriage to show.
 
+The page is in English, German, Spanish, French or Italian. It opens in your
+browser's language when it has it, and the language menu at the top changes it.
+Charts are made in the page's language; **Chart language** under **More options**
+makes them in another. A link can choose the language, such as
+`https://ttop.github.io/kincade/?lang=fr`.
+
 The page needs an internet connection to load. The first visit downloads about
 11 MB; later visits can reuse the browser's cache.
 
@@ -250,9 +256,10 @@ content:
                        only)
 
 page:
-  -o, --output FILE    PDF to write (default: "<root name> cascading
-                       pedigree.pdf"; with --fan: "<root name> fan chart.pdf";
-                       with --blank: "Blank cascading pedigree.pdf")
+  -o, --output FILE    PDF to write (default: named in the chart language, in
+                       English "<root name> cascading pedigree.pdf"; with
+                       --fan: "<root name> fan chart.pdf"; with --blank:
+                       "Blank cascading pedigree.pdf")
   --paper {letter,a4,tabloid,a3}
                        paper size (default: letter); tabloid and a3 are for
                        the fan chart
@@ -360,22 +367,32 @@ what is displayed but does not change the privacy estimate.
 
 ## Language Translations
 
-English and German are included. Select German with `--lang de`, or supply your
-own wording in a TOML language file:
+English, German, Spanish, French and Italian are included, named by their ISO
+639-1 codes: `--lang de`, `es`, `fr` or `it`. You can also supply your own wording
+in a TOML language file:
 
 ```sh
-uv run kincade family.ged --root I12 --lang de -o pedigree-de.pdf
+uv run kincade family.ged --root I12 --lang fr -o pedigree-fr.pdf
 uv run kincade family.ged --root I12 --lang ~/my-wording.toml
 ```
 
+| Language | `--lang` | Pedigree title | Box labels |
+|---|---|---|---|
+| English | `en` | Cascading Pedigree | b. bp. m. mp. d. dp. |
+| German | `de` | Ahnentafel | geb. verh. gest., in … |
+| Spanish | `es` | Árbol de antepasados | n. matr. f., en … |
+| French | `fr` | Arbre d’ascendance | naiss. mar. déc., à … |
+| Italian | `it` | Albero degli antenati | n. matr. m., a … |
+
 For additional language support, copy [the English template](kincade/lang/en.toml) and 
-translate its values. [The German translation](kincade/lang/de.toml) is another example. 
-Omitted values keep their English wording. 
+translate its values. The [German](kincade/lang/de.toml), [Spanish](kincade/lang/es.toml),
+[French](kincade/lang/fr.toml) and [Italian](kincade/lang/it.toml) files are other
+examples. Omitted values keep their English wording. 
 
 A language name is looked up in
 the package's language folder, then in `~/.config/kincade/lang/`. PDF labels,
-dates, titles and footers are translated. `--title` and `--footer` override
-the language defaults.
+dates, titles, footers and the saved PDF's name are translated. `--title`,
+`--footer` and `-o` override the language defaults.
 
 
 ## Index sort order
@@ -384,19 +401,22 @@ The pedigree index sorts by surname, given name, birth year and suffix. Missing
 or placeholder surnames sort last. Printed names keep their accents; sorting
 does not change their displayed spelling.
 
-The default folds accents to their base letters and ignores punctuation. A
-language file's `[sort]` table can change the order:
+The default folds accents to their base letters, ignores punctuation and reads a
+hyphen as a space, so hyphenated names file word by word. A language file's
+`[sort]` table can change the order:
 
 | Setting | Example |
 |---|---|
 | `expand` | `"ü" = "ue"` sorts Müller with Mueller. |
 | `after_z` | `["å", "ä", "ö"]` places these letters after Z, in that order. |
-| `ignore_particles` | `["von", "der"]` files von der Heide under H. |
+| `ignore_particles` | `["von", "der"]` files von der Heide under H; `["d’"]` files d’Artagnan under A; `["de la"]` files de la Fuente under F. The skipped particles print in recorded case (Anna von der HEIDE) and, in the index, after the given name (HEIDE, Anna von der). |
 | `mc_as_mac` | `true` files McClure with MacClure; the default is `false`. |
 
 
-The [English template](kincade/lang/en.toml) documents every key. 
-The [German language file](kincade/lang/de.toml) includes its sorting settings.
+The [English template](kincade/lang/en.toml) documents every key. Each bundled
+language file sets its language's order: German follows DIN 5007-2, Spanish files ñ
+after n and skips de, del and de la, French skips de and d’ and sorts œ as oe, and
+Italian keeps particles as part of the surname.
 
 
 ## Input Files

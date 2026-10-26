@@ -1,5 +1,6 @@
 """Real built site, external browser and deterministic worker-boundary helpers."""
 
+import importlib.util
 import io
 import json
 import os
@@ -23,6 +24,22 @@ from pypdf import PdfReader
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE = ROOT / "web/.cache/browser-tests"
+
+
+def _load_build_module():
+    # Loaded by path, not `import build`, to avoid shadowing PyPA's `build` package.
+    spec = importlib.util.spec_from_file_location(
+        "kincade_web_build", ROOT / "web/build.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+# The page's own text in each language, as the built site carries it.
+LANGUAGES = sorted(path.stem for path in (ROOT / "web/lang").glob("*.toml"))
+MESSAGES = _load_build_module().read_messages(LANGUAGES)
 CSP = (
     "default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; "
     "worker-src blob:; connect-src 'self' https://cdn.jsdelivr.net https://pypi.org https://files.pythonhosted.org; "
@@ -205,15 +222,29 @@ class App:
         )
         page.add_init_script(path=ROOT / "web/browser_tests/instrument.js")
 
-    def start(self, variant="clean", ready=True, insecure=False, gates=()):
+    def start(
+        self,
+        variant="clean",
+        ready=True,
+        insecure=False,
+        gates=(),
+        lang=None,
+        expect_lang=None,
+    ):
+        """Open the page, with ?lang= when `lang` is given, and wait for Ready in the
+        language the page should choose (`expect_lang`, else `lang`, else English)."""
         self.allow_font_failure = variant == "font-blocked"
         url = self.site.replace("127.0.0.1", "kincade.test") if insecure else self.site
-        query = "?" + urlencode({"acceptanceHold": ",".join(gates)}) if gates else ""
+        params = {"acceptanceHold": ",".join(gates)} if gates else {}
+        if lang:
+            params["lang"] = lang
+        query = "?" + urlencode(params) if params else ""
         self.page.goto(f"{url}/{variant}/index.html{query}")
         if ready:
             try:
                 expect(self.page.locator("#status")).to_have_text(
-                    "Ready", timeout=120000
+                    MESSAGES[expect_lang or lang or "en"]["status.ready"],
+                    timeout=120000,
                 )
             except AssertionError as error:
                 raise AssertionError(
@@ -223,8 +254,8 @@ class App:
     def sample(self):
         self.page.locator("#sample").click()
         self.pdf_ready()
-        expect(self.page.locator("#root-summary")).to_have_text(
-            "Root: I1, George WASHINGTON"
+        expect(self.page.locator("#root-summary")).to_contain_text(
+            ": I1, George WASHINGTON"
         )
 
     def sent(self, kind):

@@ -1,0 +1,186 @@
+# Kincade web page language file: English, the built-in wording.
+#
+# This file holds the browser page's own wording: its labels, status lines and error
+# messages. The chart's wording (the PDF's title, footer, dates and index) lives
+# separately, one file per language, in kincade/lang/<code>.toml.
+#
+# Every language file (web/lang/<code>.toml) has exactly the same keys and the same
+# {placeholders} in each value. A {placeholder} is filled in at run time with a value
+# such as a count, a name or another message's text; keep its name exactly as written
+# here. Numbers inside a filled {placeholder} are formatted for the page's language by
+# the page itself (Intl.NumberFormat), so a value does not need to format a number
+# itself.
+#
+# A plural message is written as an inline table of Unicode CLDR plural categories
+# (zero, one, two, few, many, other) for the language, such as
+# `summary = { one = "...", other = "..." }`. `other` is required; a category the
+# language does not use is simply left out and the page falls back to `other` for it.
+#
+# `[page] languageName` is the language's own name, exactly as the page's two language
+# menus list it.
+
+[page]
+# The title bar, tagline, language controls and privacy note shown above everything
+# else on the page.
+title = "Kincade — Family charts"
+tagline = "Make a cascading pedigree or fan chart PDF from a GEDCOM file"
+# {version} is Kincade's own version string.
+version = "Version {version}"
+language = "Page language"
+languageName = "English"
+privacy = "Your GEDCOM file is read in this browser and never uploaded."
+
+[status]
+# The status line at the top of the page while Kincade loads, once it is ready, and
+# its retry button after a failed load.
+loading = "Loading Kincade…"
+ready = "Ready"
+retry = "Retry"
+
+[step]
+# The name of each step while Kincade starts up, shown in the status line and inside
+# init.failed if that step fails.
+pyodide = "Loading Pyodide"
+micropip = "Loading micropip"
+reportlab = "Installing reportlab"
+kincade = "Installing Kincade"
+fonts = "Loading fonts"
+start = "Starting Kincade"
+
+[host]
+# Where a failed startup step's download came from, named inside init.failed. "site"
+# is this page's own host, used when the Kincade wheel itself fails to download from
+# it; "browser" is used when the failure happened in the browser itself rather than a
+# network download (other hosts, such as jsDelivr or PyPI, print their own name and
+# are not translated).
+site = "this site"
+browser = "browser"
+
+[init]
+# The startup failure banner. {step} and {host} are the translated step./host. names
+# above; {message} is the underlying error's text.
+failed = "{step} failed ({host}): {message}"
+downloadHint = "Reload the page. If the download still fails, report this URL to the site owner."
+
+[error]
+# Error text shown in the status banner (download/wheel/notReady) or as a page error
+# (open/search/render/rootMetadata) once Kincade is running, plus the GEDCOM file
+# problems (noPeople, read) and the "Details" disclosure on a page error.
+download = "Download failed: HTTP {status} for {url}"
+wheelMismatch = "The HTML and Kincade wheel may be from different cached builds. Reload the page to download matching files."
+notReady = "Kincade is not ready. Reload the page and try again."
+noPeople = "This GEDCOM file has no people."
+open = "Unable to open the family tree."
+search = "Unable to search the family tree."
+rootMetadata = "Unable to read the root person's details."
+render = "Unable to make the PDF."
+# {name} is the chosen file's name; {error} is the underlying error's text.
+read = "Unable to read {name}: {error}"
+details = "Details"
+
+[tree]
+# The Family tree section: choosing or dropping a GEDCOM file, and the summary line
+# once it is read.
+heading = "Family tree"
+sample = "See an example"
+choose = "Choose file"
+hint = "Choose or drop a GEDCOM file (5.5, 5.5.1, or 7.0)"
+input = "Choose GEDCOM file"
+# {name} is the file's name; {count} is the number of people it holds.
+summary = { one = "{name}: {count} person", other = "{name}: {count} people" }
+
+[root]
+# The Root person section: searching, the matching-people list, and the chosen root
+# line.
+heading = "Root person"
+search = "Search by name or record ID"
+openList = "Open person list"
+clear = "Clear selected person"
+matching = "Matching people"
+choose = "Choose a root person."
+prompt = "Choose a root person to see the chart."
+# {id} is the root's GEDCOM record ID; {name} is the root's name.
+selected = "Root: {id}, {name}"
+searching = "Searching…"
+unavailable = "Search unavailable."
+matches = { one = "{count} match", other = "{count} matches" }
+# {shown} is how many matches the list currently renders; {total} is how many the
+# search found.
+shown = "{shown} of {total} shown"
+
+[family]
+# The Root marriage field, shown only when the root person has more than one recorded
+# marriage.
+label = "Root marriage"
+first = "First recorded marriage"
+loading = "Loading marriages…"
+unknownSpouse = "Unknown spouse"
+
+[options]
+# The Options section: chart type, generations, paper, ink and the other chart
+# settings.
+heading = "Options"
+chart = "Chart"
+pedigree = "Pedigree"
+fan = "Fan"
+generations = "Generations"
+allGenerations = "All generations"
+custom = "Custom…"
+paper = "Paper"
+portrait = "Portrait"
+landscape = "Landscape"
+letter = "Letter"
+tabloid = "Tabloid"
+largePrint = "Large print"
+ink = "Ink"
+color = "Color"
+grayscale = "Grayscale"
+bw = "Black and white"
+hideLiving = "Hide living people"
+more = "More options"
+chartLanguage = "Chart language"
+customGenerations = "Custom generations"
+# The custom generations number field's placeholder, meaning "no limit".
+all = "all"
+generationsHelp = "Leave empty for all generations."
+generationsError = "Enter a whole number of at least 1, or leave empty for all generations."
+generationsInvalid = "Enter a whole number of at least 1, or leave empty."
+emptyBoxes = "Leave out unknown ancestors"
+uppercase = "Last name UPPERCASE"
+showIds = "Show record IDs"
+adoptive = "Draw adoptive and foster parents"
+standins = "Christenings and burials stand in for missing births and deaths"
+shortenPlaces = "Shorten long places"
+shadow = "Drop shadow"
+title = "Title"
+# A stand-in name the page substitutes into the chart language's own title template,
+# to build the Title field's example placeholder text (so that placeholder always
+# reads in the chart's language, not necessarily the page's).
+rootName = "Root's name"
+footer = "Footer"
+noFooter = "No footer"
+pageNumbers = "Page numbers"
+index = "Name index"
+
+[pdf]
+# The PDF section: the download/open actions, the preview frame, and the rendered
+# summary line.
+heading = "PDF"
+download = "Download PDF"
+open = "Open PDF"
+preview = "Family chart PDF preview"
+rendering = "Rendering…"
+builtinFonts = "Built-in fonts used"
+bytes = { one = "{size} byte", other = "{size} bytes" }
+kb = "{size} KB"
+mb = "{size} MB"
+# Joins the three chart/indexPages/pages count messages into the pedigree summary
+# line.
+pedigree = "{charts}, {indexPages}, {pages}"
+charts = { one = "{count} chart", other = "{count} charts" }
+indexPages = { one = "{count} index page", other = "{count} index pages" }
+pages = { one = "{count} page", other = "{count} pages" }
+# Joins the generations/people count messages into the fan chart summary line.
+fan = "fan chart, {generations}, {people}"
+generations = { one = "{count} generation", other = "{count} generations" }
+people = { one = "{count} person", other = "{count} people" }

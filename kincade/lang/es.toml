@@ -32,8 +32,6 @@ footer_blank = "Creado con Kincade"
 # Full date for the footer and for GEDCOM dates with a day: "3 mar. 1903".
 date_format = "{day} {month} {year}"
 
-# The first of the month is the number 1, as other days: "1 mar. 1903".
-day_one = "1"
 
 # Chart label, top right.
 chart_label = "Cuadro {n}"
@@ -56,9 +54,17 @@ page_number = "Página {page} de {pages}"
 # type, so keep it short.
 record_id = "[{id}]"
 
+# The names of the saved PDFs, before .pdf. {name} is the root person's name.
+file_name = "Árbol de antepasados de {name}"
+fan_file_name = "Árbol en abanico de {name}"
+blank_file_name = "Árbol de antepasados en blanco"
+
 [months]
 # January first. The RAE abbreviations, each with a period.
 short = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sept.", "oct.", "nov.", "dic."]
+
+[days]
+# Every day prints as its number: "1 mar. 1903".
 
 [index]
 # Title of the name index pages.
@@ -66,7 +72,10 @@ title = "Índice onomástico"
 
 # One line under the title of the first index page: how to read the numbers after each
 # name (cuadro-número: 6-1 is box 1 on cuadro 6). An empty string leaves it off.
-legend = "Los números tras cada nombre indican el cuadro y el número: 6-1 es el n.º 1 del cuadro 6."
+legend = "Los números que siguen a cada nombre indican el cuadro y el número dentro de él: 6-1 es el n.º 1 del cuadro 6."
+
+# Where a person is drawn: cuadro-número.
+reference = "{chart}-{pos}"
 
 # Birth-year piece of an index entry: n. = nacimiento.
 born = "n. {birth}"
@@ -83,17 +92,19 @@ years = "({years})"
 # The birth-year piece when the year is a christening or baptism (baut. = bautismo).
 christened = "baut. {birth}"
 
-# The death-year piece when the year is a burial (sep. = sepultura) or a cremation.
-buried = "sep. {death}"
+# The death-year piece when the year is a burial (sepult. = sepultura, not sep., which
+# reads as septiembre) or a cremation.
+buried = "sepult. {death}"
 cremated = "crem. {death}"
 
 [relationship]
 # Relationship note from Tree.parent_relationship, in either parents mode.
 # Uses available non-step parents, or the link's non-step relationships when
 # neither parent is available. Birth and other relationships give no note. Nouns,
-# so the note is the same for a son or a daughter: adopción, acogida (foster care).
-adopted = "(adopción)"
-foster = "(acogida)"
+# so the note is the same for a son or a daughter: por adopción, en acogida (foster
+# care; bare "acogida" would read as a feminine participle).
+adopted = "(por adopción)"
+foster = "(en acogida)"
 
 [labels]
 # Partner paired with the initial pedigree root's marriage.
@@ -111,7 +122,7 @@ death_place = "en"
 # (burial), cremación.
 christening = "baut."
 christening_place = "en"
-burial = "sep."
+burial = "sepult."
 burial_place = "en"
 cremation = "crem."
 cremation_place = "en"
@@ -129,34 +140,44 @@ to = "hasta"
 # Between the two dates of a range: 1622–1632.
 range = "–"
 
+[dates.with_day]
+# The words read the same before a day: "antes de 17 ene. 1666".
+
+[dates.rewrite]
+# No phrase changes.
+
 [years]
 # Fan stand-ins use the box labels: bautismo, sepultura and cremación.
 # {y} is the year with any short date word.
 christening = "baut. {y}"
-burial = "sep. {y}"
+burial = "sepult. {y}"
 cremation = "crem. {y}"
 
 # A death without a readable year: † is the same for anyone, as fallecido is not.
 deceased = "†"
 
-# Short fan year words: h. (hacia: approximate, estimated or calculated), ant. (antes:
-# before or TO), desp. (después: after or FROM), entre (before a range's first year).
-# {y} is the year, including both readings of a double year.
+# Short fan year words: h. (hacia: approximate, estimated or calculated, and the first
+# year of a range, where entre would read as the span to the death year), ant. (antes:
+# before or TO), desp. (después: after or FROM). {y} is the year, including both
+# readings of a double year.
 about = "h. {y}"
 before = "ant. {y}"
 after = "desp. {y}"
-between = "entre {y}"
+between = "h. {y}"
 
 [sort]
-# The index order of Spanish lists (RAE). The printed names do not change. ñ is a letter
-# of its own, after n: "ñ" = "n~" files Muñoz after Muntaner and before Murillo (the "~"
-# sorts after every letter). ch and ll are not letters of their own, so they sort as
-# written. The prepositions de and del, and an article after them, are skipped when a
-# surname is sorted: "de la Fuente" files under F and "del Río" under R. A surname of
-# an article alone ("Las Heras") is skipped to its next word too. Punctuation is dropped
-# from the sort key first.
+# The index order of Spanish lists (RAE, Ortografía, alfabetización de antropónimos). ñ
+# is a letter of its own, after n: "ñ" = "n~" files Muñoz after Muntaner and before
+# Murillo (the "~" sorts after every letter). ch and ll are not letters of their own,
+# so they sort as written. The prepositions de and del, and an article after de, are
+# skipped when a surname is sorted: "de la Fuente" files under F and "del Río" under R.
+# A leading article stays the filing word: "Las Heras" files under L, as do San and
+# Santa under S. The skipped particles print in small letters (Lucía de la FUENTE) and,
+# in the index, after the given name (FUENTE, Lucía de la). Punctuation is dropped from
+# the sort key first, and a hyphen reads as a space, so Ruiz-Mateos files as two
+# surnames, among the Ruiz M… entries.
 after_z = []
-ignore_particles = ["de", "del", "la", "las", "los"]
+ignore_particles = ["de", "del", "de la", "de las", "de los"]
 mc_as_mac = false
 
 [sort.expand]

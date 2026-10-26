@@ -22,7 +22,7 @@ from conftest import PAPERS, TODAY, approx, render, render_chart
 from pdfread import drawn, rectangles, runs
 
 ENGLISH = "Ancestry continues on the chart numbered in the last column."
-GERMAN = "Fortsetzung auf der Tafel mit der Nummer in der letzten Spalte."
+GERMAN = "Die Ahnen der letzten Spalte folgen auf der daneben genannten Tafel."
 # on chart 2, which continues from chart 1
 CONTINUATION = "Number 1 on this chart is the same as number 8 on chart 1."
 # the continuation line's baseline, measured down from the top of the page

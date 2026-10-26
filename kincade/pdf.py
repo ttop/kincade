@@ -39,6 +39,7 @@ from .lang import (
     PLACEHOLDERS,
     KincadeWarning,
     SortRules,
+    day_number,
     display_name,
     fill,
     format_date,
@@ -1871,7 +1872,7 @@ def footer_text(
         strings["date_format"],
         PLACEHOLDERS["date_format"],
         {
-            "day": str(today.day),
+            "day": day_number(today.day, strings),
             "month": strings["months"]["short"][today.month - 1],
             "year": str(today.year),
         },

@@ -4,6 +4,7 @@ lang/*.toml file, or the Options.lang argument (a name, a path or a mapping of s
 Synthetic fixtures only.
 """
 
+import datetime
 import errno
 import re
 import tomllib
@@ -55,6 +56,7 @@ def test_default_strings_are_the_english_wording():
     assert d["meta_title"] == "{title} — {name}"
     assert d["footer"] == "Created {date} using Kincade"
     assert d["date_format"] == "{day} {month} {year}"
+    assert d["day_one"] == "1"
     assert d["chart_label"] == "Chart {n}"
     assert (
         d["continuation"]
@@ -153,11 +155,19 @@ def test_every_string_names_its_placeholders():
     assert leaves(kincade.lang.DEFAULT_STRINGS) == set(kincade.lang.PLACEHOLDERS)
 
 
-def test_german_file_translates_every_key_without_warnings(capsys):
-    de = tomllib.loads((kincade.lang.LANG_DIR / "de.toml").read_text(encoding="utf-8"))
-    assert leaves(de) == leaves(kincade.lang.DEFAULT_STRINGS)
-    # complete, so nothing falls back and every template is valid
-    assert kincade.lang.load_strings("de") == de
+@pytest.mark.parametrize("lang", ["de", "es", "fr", "it"])
+def test_each_bundled_language_translates_every_key_without_warnings(lang, capsys):
+    path = kincade.lang.LANG_DIR / f"{lang}.toml"
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    assert leaves(data) == leaves(kincade.lang.DEFAULT_STRINGS)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        strings = kincade.lang.load_strings(lang)
+    # complete, so nothing falls back and every template is valid; the sort settings
+    # are read into their normal form (d’ as d')
+    assert {k: v for k, v in strings.items() if k != "sort"} == {
+        k: v for k, v in data.items() if k != "sort"
+    }
     assert capsys.readouterr().err == ""
 
 
@@ -620,6 +630,157 @@ def test_german_index_years_and_locators():
     assert kincade.pdf.build_index(
         tree, charts, lambda pid: False, exclude_private=False
     ) == ["DOE, Jane (b. 1850 – d. 1920), 1-1"]
+
+
+# ---------------------------------------------------------------- Spanish, French, Italian
+
+
+ROMANCE_RENDER = {
+    "es": [
+        "Árbol de antepasados — Jane ASHFORD",
+        "Cuadro 1",
+        "Cuadro 2",
+        "Índice onomástico",
+        "Creado el 10 oct. 2026 con Kincade",
+        "Página 1 de 6",
+        "n. 14 feb. 1980",
+        "en Springfield, Illinois",
+        "n. 3 mar. 1950",
+        "f. 2 abr. 2020",
+        "en Dayton, Ohio",
+        "El n.º 1 de este cuadro corresponde al n.º 8 del cuadro 1.",
+        "ASHFORD, Jane (n. 1980), 1-1",
+    ],
+    "fr": [
+        "Arbre d’ascendance — Jane ASHFORD",
+        "Tableau 1",
+        "Tableau 2",
+        "Index des noms",
+        "Créé le 10 oct. 2026 avec Kincade",
+        "Page 1 sur 6",
+        "naiss. 14 févr. 1980",
+        "à Springfield, Illinois",
+        "naiss. 3 mars 1950",
+        "déc. 2 avr. 2020",
+        "à Dayton, Ohio",
+        "Le n° 1 de ce tableau correspond au n° 8 du tableau 1.",
+        "ASHFORD, Jane (° 1980), 1-1",
+    ],
+    "it": [
+        "Albero degli antenati — Jane ASHFORD",
+        "Tavola 1",
+        "Tavola 2",
+        "Indice dei nomi",
+        "Creato in data 10 ott. 2026 con Kincade",
+        "Pagina 1 di 6",
+        "n. 14 feb. 1980",
+        "a Springfield, Illinois",
+        "n. 3 mar. 1950",
+        "m. 2 apr. 2020",
+        "a Dayton, Ohio",
+        "Il n. 1 di questa tavola corrisponde al n. 8 della tavola 1.",
+        "ASHFORD, Jane (n. 1980), 1-1",
+    ],
+}
+
+
+@pytest.mark.parametrize("lang", sorted(ROMANCE_RENDER))
+def test_spanish_french_and_italian_renders_use_their_wording(pedigree, lang):
+    text = drawn(render(pedigree, generations=5, lang=lang))
+    for expected in ROMANCE_RENDER[lang]:
+        assert expected in text, expected
+    assert not any(
+        t == "Index" or t.startswith(("b. ", "d. ", "Chart ", "Created ", "Page 1 of"))
+        for t in text
+    )
+
+
+ROMANCE_DATES = [
+    # raw, Spanish, French, Italian
+    ("13 JAN 1917", "13 ene. 1917", "13 janv. 1917", "13 gen. 1917"),
+    ("1 MAR 1800", "1 mar. 1800", "1er mars 1800", "1º mar. 1800"),
+    ("1 AUG", "1 ago.", "1er août", "1º ago."),
+    ("5 MAY 1900", "5 may. 1900", "5 mai 1900", "5 mag. 1900"),
+    ("24 DEC 1900", "24 dic. 1900", "24 déc. 1900", "24 dic. 1900"),
+    ("SEP 1917", "sept. 1917", "sept. 1917", "set. 1917"),
+    ("ABT 1755", "hacia 1755", "vers 1755", "ca. 1755"),
+    ("EST 1755", "est. 1755", "estimé 1755", "stim. 1755"),
+    ("CAL 1755", "calc. 1755", "calculé 1755", "calc. 1755"),
+    ("BEF 1800", "antes de 1800", "avant 1800", "ante 1800"),
+    ("AFT 1800", "después de 1800", "après 1800", "post 1800"),
+    ("BET 1622 AND 1632", "1622–1632", "1622–1632", "1622–1632"),
+    ("FROM 1622", "desde 1622", "à partir de 1622", "dal 1622"),
+    ("TO 1632", "hasta 1632", "jusqu’à 1632", "fino al 1632"),
+]
+
+
+@pytest.mark.parametrize("raw,es,fr,it", ROMANCE_DATES)
+def test_spanish_french_and_italian_dates(raw, es, fr, it):
+    for lang, expected in (("es", es), ("fr", fr), ("it", it)):
+        strings = kincade.lang.load_strings(lang)
+        assert kincade.lang.format_date(parse_date(raw), strings) == expected
+
+
+@pytest.mark.parametrize(
+    "lang,footer",
+    [
+        (None, "Created 1 Mar 2026 using Kincade"),
+        ("de", "Erstellt am 1. März 2026 mit Kincade"),
+        ("es", "Creado el 1 mar. 2026 con Kincade"),
+        ("fr", "Créé le 1er mars 2026 avec Kincade"),
+        ("it", "Creato in data 1º mar. 2026 con Kincade"),
+    ],
+)
+def test_the_first_of_the_month_in_the_footer_is_the_languages_day_one(
+    pedigree, lang, footer
+):
+    text = drawn(
+        render(
+            pedigree,
+            generations=1,
+            index=False,
+            lang=lang,
+            today=datetime.date(2026, 3, 1),
+        )
+    )
+    assert footer in text
+
+
+def test_day_one_comes_from_the_strings_argument_and_takes_no_placeholders():
+    s = kincade.lang.load_strings(None, {"day_one": "first"})
+    assert kincade.lang.format_date(parse_date("1 JAN 1917"), s) == "first Jan 1917"
+    assert kincade.lang.format_date(parse_date("11 JAN 1917"), s) == "11 Jan 1917"
+    with pytest.raises(kincade.lang.LangError):
+        kincade.lang.load_strings(None, {"day_one": "{day}"})
+
+
+@pytest.mark.parametrize(
+    "lang,expected",
+    [
+        ("es", "ASHFORD, Ann (baut. 1750, sep. 1800), 1-1"),
+        ("fr", "ASHFORD, Ann (bapt. 1750, inh. 1800), 1-1"),
+        ("it", "ASHFORD, Ann (batt. 1750, sep. 1800), 1-1"),
+    ],
+)
+def test_spanish_french_and_italian_stand_ins_in_boxes_and_index(lang, expected):
+    tree = read_gedcom(
+        ged(
+            "0 @I1@ INDI",
+            "1 NAME Ann /Ashford/",
+            "1 CHR",
+            "2 DATE 1750",
+            "2 PLAC Little Hall",
+            "1 BURI",
+            "2 DATE 1800",
+        )
+    )
+    strings = kincade.lang.load_strings(lang)
+    text = drawn(render(tree, lang=lang))
+    christening = strings["labels"]["christening"]
+    place = strings["labels"]["christening_place"]
+    assert f"{christening} 1750" in text and f"{place} Little Hall" in text
+    assert f"{strings['labels']['burial']} 1800" in text
+    assert expected in text
 
 
 # ----------------------------------------------------------------

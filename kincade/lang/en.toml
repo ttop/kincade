@@ -4,9 +4,9 @@
 # is given. To make another language, copy it to ~/.config/kincade/lang/<name>.toml,
 # translate the values, and run:
 # uv run kincade FILE.ged --root ... --lang <name>
-# A name Kincade ships a file for (en, de) finds that bundled file first. A --lang value
-# that ends in .toml or contains a path separator is used as a path, so a copy kept
-# anywhere works too: --lang path/to/<name>.toml
+# A name Kincade ships a file for (en, de, es, fr, it) finds that bundled file first. A
+# --lang value that ends in .toml or contains a path separator is used as a path, so a
+# copy kept anywhere works too: --lang path/to/<name>.toml
 #
 # Values are double-quoted TOML strings. A key you leave out keeps its English value,
 # and a key the program does not know is ignored with a warning. Text in {braces} is a
@@ -40,6 +40,10 @@ footer_blank = "Created using Kincade"
 # A full date (day, month, year), for the footer and for GEDCOM dates with a day. {day}
 # and {year} are numbers as text; {month} is from months.short.
 date_format = "{day} {month} {year}"
+
+# The first day of a month, in place of the number 1 wherever a date has a day. French
+# writes 1er (1er mars 1903) and Italian 1º. No placeholders.
+day_one = "1"
 
 # The chart label at the top right. {n} is the chart number.
 chart_label = "Chart {n}"
@@ -199,9 +203,13 @@ after_z = []
 # Each is a whole word, matched without regard to case, and several in a row are all
 # skipped: with ["von", "der"], "von der Heide" files under H.
 # A surname that is only a particle ("Van") is never stripped, and a given name is never
-# affected. The printed name keeps its particle. German (DIN 5007-2) uses ["von", "zu",
-# "vom", "zum", "van", "de", "der", "den", "dem"], so van Gogh files under G, between
-# Goethe and Gogol. Dutch lists often skip van, de, der, den, ten, ter, te and het.
+# affected. The printed name keeps its particle. A particle that ends in an apostrophe
+# (' or ’), such as d’, is elided: it is skipped where it is joined to the front of the
+# surname, so with ["d’"] d’Artagnan files under A. German (DIN 5007-2) uses ["von",
+# "zu", "vom", "zum", "van", "de", "der", "den", "dem"], so van Gogh files under G,
+# between Goethe and Gogol. Dutch lists often skip van, de, der, den, ten, ter, te and
+# het. French skips ["de", "d’"] and keeps le, la, du and des: de Gaulle files under G,
+# du Bellay under D.
 ignore_particles = []
 
 # true sorts a surname that begins with "Mc" as if it began with "Mac", the English

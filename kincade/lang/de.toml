@@ -34,6 +34,9 @@ footer_blank = "Erstellt mit Kincade"
 # the day ("3. März 1903").
 date_format = "{day}. {month} {year}"
 
+# The first of the month is the number 1, as other days: "1. März 1903".
+day_one = "1"
+
 # Chart label, top right.
 chart_label = "Tafel {n}"
 

@@ -44,6 +44,8 @@ DEFAULT_STRINGS: dict[str, Any] = {
     "footer_blank": "Created using Kincade",
     # a full date: the footer's date and GEDCOM dates that have a day
     "date_format": "{day} {month} {year}",
+    # the first day of a month in a date, where a language writes it apart (1er)
+    "day_one": "1",
     "chart_label": "Chart {n}",
     "continuation": "Number 1 on this chart is the same as number {pos} on chart {chart}.",
     # chart 1's line when it has continuation charts ("" for none): the continuation
@@ -119,6 +121,7 @@ PLACEHOLDERS: dict[str, tuple[str, ...]] = {
     "footer": ("date",),
     "footer_blank": (),
     "date_format": ("day", "month", "year"),
+    "day_one": (),
     "chart_label": ("n",),
     "continuation": ("pos", "chart"),
     "chart_note": (),
@@ -363,6 +366,10 @@ def _check_after_z(source: str, path: str, value: Any, base: Any) -> list[str]:
     return letters
 
 
+# the apostrophes an elided particle may end with, read as the first
+_APOSTROPHES = str.maketrans("’ʼ", "''")
+
+
 def _check_ignore_particles(source: str, path: str, value: Any, base: Any) -> list[str]:
     if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
         raise LangError(
@@ -374,7 +381,13 @@ def _check_ignore_particles(source: str, path: str, value: Any, base: Any) -> li
             raise LangError(
                 f"{source}: {path} item {item!r} must be one word (no spaces)"
             )
-        words.append(_sort_text(item))
+        word = _sort_text(item).translate(_APOSTROPHES)
+        if "'" in word[:-1] or word == "'":
+            raise LangError(
+                f"{source}: {path} item {item!r} may have an apostrophe only at "
+                "its end, after the particle, as in d’"
+            )
+        words.append(word)
     return words
 
 
@@ -497,9 +510,9 @@ def display_name(p: Person, preserve_case: bool = False) -> str:
 
 
 def _day_text(day: Day, strings: Mapping[str, Any]) -> str:
-    """One date as text: the month in the language's short name, a full date (day, month
-    and year) laid out by the date_format template, a double year as 1731/32. A date
-    with parts missing prints what it has, day month year.
+    """One date as text: the month in the language's short name, the 1st as day_one, a
+    full date (day, month and year) laid out by the date_format template, a double year
+    as 1731/32. A date with parts missing prints what it has, day month year.
     """
     year = ""
     if day.year is not None:
@@ -509,17 +522,20 @@ def _day_text(day: Day, strings: Mapping[str, Any]) -> str:
             else str(day.year)
         )
     month = strings["months"]["short"][day.month - 1] if day.month else ""
-    if day.day is not None and month and year:
+    number = day_number(day.day, strings) if day.day is not None else ""
+    if number and month and year:
         return fill(
             strings["date_format"],
             PLACEHOLDERS["date_format"],
-            {"day": day.day, "month": month, "year": year},
+            {"day": number, "month": month, "year": year},
         )
-    return " ".join(
-        part
-        for part in (str(day.day) if day.day is not None else "", month, year)
-        if part
-    )
+    return " ".join(part for part in (number, month, year) if part)
+
+
+def day_number(day: int, strings: Mapping[str, Any]) -> str:
+    """The day of the month as a date prints it: the language's day_one for the 1st
+    (French 1er), else the number."""
+    return strings["day_one"] if day == 1 else str(day)
 
 
 def format_date(date: Date | None, strings: Mapping[str, Any] = DEFAULT_STRINGS) -> str:
@@ -578,8 +594,10 @@ class SortRules:
     """The [sort] settings of a language as a sort key. fold(text) gives the key of one
     name part.
 
-    Order of operations: casefold and NFC; then punctuation is dropped (letters, digits
-    and spaces only); then, for a surname only, ignore_particles and mc_as_mac; then
+    Order of operations: casefold and NFC; then, for a surname only, an elided particle
+    (one of ignore_particles that ends in an apostrophe, such as d’) is dropped from the
+    front; then punctuation is dropped (letters, digits and spaces only); then, for a
+    surname only, the other ignore_particles and mc_as_mac; then
     expand (one pass, longest key first, so a replacement is never replaced again);
     then after_z letters become sentinels that sort after z and after the "~" of any
     expansion; and last NFKD accent folding, which drops the combining marks. The
@@ -590,7 +608,12 @@ class SortRules:
     def __init__(self, sort: Mapping[str, Any]) -> None:
         # a partial table keeps the English value of what it leaves out
         sort = {**DEFAULT_STRINGS["sort"], **sort}
-        self.particles = frozenset(sort["ignore_particles"])
+        particles = sort["ignore_particles"]
+        self.particles = frozenset(p for p in particles if not p.endswith("'"))
+        # longest first, so "dell'" is tried before "d'"
+        self.elided = sorted(
+            (p for p in particles if p.endswith("'")), key=len, reverse=True
+        )
         self.mc_as_mac = sort["mc_as_mac"]
         self.after_z = {
             letter: chr(_AFTER_Z + i) for i, letter in enumerate(sort["after_z"])
@@ -601,7 +624,10 @@ class SortRules:
         self._expand_re = re.compile("|".join(map(re.escape, keys))) if keys else None
 
     def fold(self, text: str, surname: bool = False) -> str:
-        s = _letters_digits_and_spaces(_sort_text(text))
+        s = _sort_text(text)
+        if surname and self.elided:
+            s = self._skip_elided(s)
+        s = _letters_digits_and_spaces(s)
         if surname:
             s = self._skip_particles(s)
             if self.mc_as_mac and s.startswith("mc"):
@@ -615,6 +641,16 @@ class SortRules:
             for ch in unicodedata.normalize("NFKD", s)
             if not unicodedata.combining(ch)
         )
+
+    def _skip_elided(self, s: str) -> str:
+        """Drop an elided particle from the front, if a name is left after it (so
+        "d’Artagnan" files as "artagnan", but "D’" stays as it is)."""
+        front = s.lstrip().translate(_APOSTROPHES)
+        for particle in self.elided:
+            rest = front[len(particle) :]
+            if front.startswith(particle) and _letters_digits_and_spaces(rest):
+                return rest
+        return s
 
     def _skip_particles(self, s: str) -> str:
         """Drop particles from the front, whole words only, but never the last word (so

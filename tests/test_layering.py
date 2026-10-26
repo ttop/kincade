@@ -99,6 +99,9 @@ def test_the_package_folder_holds_the_language_files():
     assert sorted(p.name for p in (PKG / "lang").glob("*.toml")) == [
         "de.toml",
         "en.toml",
+        "es.toml",
+        "fr.toml",
+        "it.toml",
     ]
 
 

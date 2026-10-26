@@ -416,6 +416,119 @@ def test_german_sort_settings_follow_din_5007_2():
     }
 
 
+# ---------------------------------------------------------------- French, Spanish, Italian
+
+
+def test_french_skips_de_and_elided_d_but_keeps_articles_and_du():
+    people = [
+        ("Charles", "d’Artagnan"),
+        ("Anne", "Arnaud"),
+        ("Jean", "de Gaulle"),
+        ("Paul", "Gauthier"),
+        ("Jean", "de La Fontaine"),
+        ("Louis", "Lambert"),
+        ("Joachim", "du Bellay"),
+        ("Marc", "Dubois"),
+    ]
+    assert heads(people, kincade.lang.load_strings("fr")) == [
+        "ARNAUD, Anne",
+        "D’ARTAGNAN, Charles",
+        "DU BELLAY, Joachim",
+        "DUBOIS, Marc",
+        "DE GAULLE, Jean",
+        "GAUTHIER, Paul",
+        "DE LA FONTAINE, Jean",
+        "LAMBERT, Louis",
+    ]
+    assert heads(people)[:4] == [
+        "ARNAUD, Anne",
+        "D’ARTAGNAN, Charles",
+        "DE GAULLE, Jean",
+        "DE LA FONTAINE, Jean",
+    ]
+
+
+def test_french_ligatures_sort_as_two_letters():
+    people = [("Paul", "Ozanne"), ("Lucie", "Œuvray"), ("Olive", "Oeuvray")]
+    assert heads(people, kincade.lang.load_strings("fr")) == [
+        "ŒUVRAY, Lucie",
+        "OEUVRAY, Olive",
+        "OZANNE, Paul",
+    ]
+    # without the expansion œ is not a letter of a to z, so it sorts after them
+    assert heads(people)[-1] == "ŒUVRAY, Lucie"
+
+
+def test_an_elided_particle_alone_is_not_stripped():
+    people = [("Anne", "Dupont"), ("Bert", "D’"), ("Carl", "Cadet")]
+    assert heads(people, kincade.lang.load_strings("fr")) == [
+        "CADET, Carl",
+        "D’, Bert",
+        "DUPONT, Anne",
+    ]
+
+
+def test_an_elided_particle_matches_either_apostrophe():
+    strings = kincade.lang.load_strings(None, {"sort": {"ignore_particles": ["d'"]}})
+    assert strings["sort"]["ignore_particles"] == ["d'"]
+    people = [("Ann", "Brun"), ("Eve", "d’Arc"), ("Ida", "D'Amours"), ("Jo", "Carre")]
+    assert heads(people, strings) == [
+        "D'AMOURS, Ida",
+        "D’ARC, Eve",
+        "BRUN, Ann",
+        "CARRE, Jo",
+    ]
+
+
+def test_spanish_files_enye_after_n_and_skips_de_del_and_their_articles():
+    people = [
+        ("Ana", "Muñoz"),
+        ("Luis", "Muntaner"),
+        ("Eva", "Murillo"),
+        ("Juan", "de la Fuente"),
+        ("Rosa", "Fuentes"),
+        ("Pedro", "del Río"),
+        ("Inés", "Ríos"),
+    ]
+    assert heads(people, kincade.lang.load_strings("es")) == [
+        "DE LA FUENTE, Juan",
+        "FUENTES, Rosa",
+        "MUNTANER, Luis",
+        "MUÑOZ, Ana",
+        "MURILLO, Eva",
+        "DEL RÍO, Pedro",
+        "RÍOS, Inés",
+    ]
+    assert heads(people)[:4] == [
+        "DE LA FUENTE, Juan",
+        "DEL RÍO, Pedro",
+        "FUENTES, Rosa",
+        "MUÑOZ, Ana",
+    ]
+
+
+def test_italian_files_surnames_with_their_particles_as_english_does():
+    people = [
+        ("Gino", "Russo"),
+        ("Marco", "De Luca"),
+        ("Luca", "Lo Russo"),
+        ("Sara", "D’Angelo"),
+        ("Anna", "Dal Lago"),
+    ]
+    italian = heads(people, kincade.lang.load_strings("it"))
+    assert (
+        italian
+        == heads(people)
+        == [
+            "DAL LAGO, Anna",
+            "D’ANGELO, Sara",
+            "DE LUCA, Marco",
+            "LO RUSSO, Luca",
+            "RUSSO, Gino",
+        ]
+    )
+
+
 # ----------------------------------------------------------------
 # Swedish, Finnish, Danish, Norwegian
 
@@ -611,6 +724,11 @@ def test_a_language_file_can_give_only_the_sort_keys_it_changes(tmp_path):
             "sort.ignore_particles",
         ),  # one word per item
         ('[sort]\nignore_particles = [""]\n', "sort.ignore_particles"),
+        (
+            '[sort]\nignore_particles = ["l’a"]\n',
+            "sort.ignore_particles",
+        ),  # an apostrophe only at the end, after the particle
+        ('[sort]\nignore_particles = ["\'"]\n', "sort.ignore_particles"),
         ('[sort]\nmc_as_mac = "yes"\n', "sort.mc_as_mac"),
         ("[sort]\nmc_as_mac = 1\n", "sort.mc_as_mac"),  # a number is not true or false
         ('sort = "none"\n', "sort"),

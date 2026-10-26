@@ -1,0 +1,165 @@
+# Kincade language file: French (uv run kincade FILE.ged --root ... --lang fr).
+#
+# Every text key of lang/en.toml is translated here. Keep placeholder names exactly:
+# {n}, {pos}, {chart}, {date}, {day}, {month}, {year}, {birth}, {death}, {years},
+# {title}, {name}, {page}, {pages}, {id}, {y}. Only templated keys allow braces; write a
+# literal brace doubled ({{ or }}). Box labels share a line with their values, so
+# keep them short.
+#
+# Wording follows French genealogical usage: "Arbre d’ascendance" for a pedigree chart,
+# "tableau" for each sheet, naiss./mar./déc. for born/married/died, "à" before a place,
+# "vers" for approximate dates, the Académie month abbreviations, 1er for the first of
+# the month, ° and † for years in the index, and words that do not change with a
+# person's sex.
+
+# Base pedigree title. --title overrides the printed heading.
+title = "Arbre d’ascendance"
+
+# Name for a living person when --exclude-private is enabled.
+living_name = "Personne vivante"
+
+# Fan page title. {name} is the center person's name.
+fan_title = "{name} — Arbre en éventail"
+
+# Default pedigree heading and PDF Title metadata.
+meta_title = "{title} — {name}"
+
+# Footer on every page.
+footer = "Créé le {date} avec Kincade"
+
+# Footer of the blank chart (--blank): no date.
+footer_blank = "Créé avec Kincade"
+
+# Full date for the footer and for GEDCOM dates with a day: "3 mars 1903".
+date_format = "{day} {month} {year}"
+
+# The first of the month: "1er mars 1903".
+day_one = "1er"
+
+# Chart label, top right.
+chart_label = "Tableau {n}"
+
+# Line under the header of a continuation chart.
+continuation = "Le n° 1 de ce tableau correspond au n° {pos} du tableau {chart}."
+
+# Line under the header of tableau 1 when it has continuation charts. An empty string
+# leaves it off.
+chart_note = "L’ascendance se poursuit sur le tableau indiqué dans la dernière colonne."
+
+# Marks text that is cut short to fit its space. One to three characters.
+ellipsis = "…"
+
+# Bottom-left page number: {page} of {pages}, counting charts and index pages.
+page_number = "Page {page} sur {pages}"
+
+# The record ID printed with --show-ids, at the upper right of a box and after the
+# name in the index. {id} is the person's record ID without the @ signs. Small black
+# type, so keep it short.
+record_id = "[{id}]"
+
+[months]
+# January first. mars, mai, juin and août are written out; the rest take a period.
+short = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
+
+[index]
+# Title of the name index pages.
+title = "Index des noms"
+
+# One line under the title of the first index page: how to read the numbers after each
+# name (tableau-numéro: 6-1 is box 1 on tableau 6). An empty string leaves it off.
+legend = "Les nombres après chaque nom indiquent le tableau et le numéro : 6-1 est le n° 1 du tableau 6."
+
+# Birth-year piece of an index entry: ° = naissance.
+born = "° {birth}"
+
+# Death-year piece of an index entry: † = décès.
+died = "† {death}"
+
+# Between the birth and death pieces.
+joiner = ", "
+
+# Wraps both pieces in an index entry: (° 1850, † 1920).
+years = "({years})"
+
+# The birth-year piece when the year is a christening or baptism (bapt. = baptême).
+christened = "bapt. {birth}"
+
+# The death-year piece when the year is a burial (inh. = inhumation) or a cremation.
+buried = "inh. {death}"
+cremated = "crém. {death}"
+
+[relationship]
+# Relationship note from Tree.parent_relationship, in either parents mode.
+# Uses available non-step parents, or the link's non-step relationships when
+# neither parent is available. Birth and other relationships give no note. Nouns,
+# so the note is the same for a son or a daughter: adoption, placement (foster care).
+adopted = "(adoption)"
+foster = "(placement)"
+
+[labels]
+# Partner paired with the initial pedigree root's marriage, with the French space
+# before the colon.
+spouse = "conjoint :"
+# Box labels, before each value: naissance, mariage, décès; each place line reads
+# "à …".
+birth = "naiss."
+birth_place = "à"
+marriage = "mar."
+marriage_place = "à"
+death = "déc."
+death_place = "à"
+
+# Stand-ins for a missing birth or death: baptême (christening or baptism), inhumation
+# (burial), crémation.
+christening = "bapt."
+christening_place = "à"
+burial = "inh."
+burial_place = "à"
+cremation = "crém."
+cremation_place = "à"
+
+[dates]
+# ABT → vers, EST → estimé, CAL → calculé.
+about = "vers"
+estimated = "estimé"
+calculated = "calculé"
+before = "avant"
+after = "après"
+# A FROM date with no TO, and a TO date with no FROM.
+from = "à partir de"
+to = "jusqu’à"
+# Between the two dates of a range: 1622–1632.
+range = "–"
+
+[years]
+# Fan stand-ins use the box labels: baptême, inhumation and crémation.
+# {y} is the year with any short date word.
+christening = "bapt. {y}"
+burial = "inh. {y}"
+cremation = "crém. {y}"
+
+# A death without a readable year: † is the same for anyone, as décédé is not.
+deceased = "†"
+
+# Short fan year words: v. (vers: approximate, estimated or calculated), av. (avant:
+# before or TO), apr. (après: after or FROM), entre (before a range's first year).
+# {y} is the year, including both readings of a double year.
+about = "v. {y}"
+before = "av. {y}"
+after = "apr. {y}"
+between = "entre {y}"
+
+[sort]
+# The index order of French lists. The printed names do not change. Accents and ç sort
+# as their base letters, and the ligatures œ and æ as oe and ae, so Œuvray files with
+# Oeuvray. The particle de, and d’ before a vowel, are skipped when a surname is sorted;
+# the article and the contracted forms are kept: "de Gaulle" files under G,
+# "d’Artagnan" under A, "de La Fontaine" under L and "du Bellay" under D. Punctuation
+# is dropped from the sort key first.
+after_z = []
+ignore_particles = ["de", "d’"]
+mc_as_mac = false
+
+[sort.expand]
+"œ" = "oe"
+"æ" = "ae"

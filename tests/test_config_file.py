@@ -146,7 +146,7 @@ def test_precedence_and_sources(tmp_path, capsys, rendered_options):
     write(
         tmp_path / "kincade.toml",
         f"""
-gedcom = "{FIX / "pedigree.ged"}"
+gedcom = "{(FIX / "pedigree.ged").as_posix()}"
 root = "@I1@"
 generations = 3
 exclude_private = true

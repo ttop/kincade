@@ -472,8 +472,9 @@ A `ResizeObserver` watches container width, ignores zero widths and height-only
 changes, and updates height without reloading an unchanged display URL. Returning
 above 48rem restores sizing from the accepted PDF's geometry. The one-page-height
 estimate covers initial fit-width display; later native toolbar zoom or rotation
-can change the viewer's internal height. The browser suite checks accepted
-geometry and resize behavior against real PDFs.
+can change the viewer's internal height. The Python suite checks the preview size
+against the rendered PDF's own page size; the browser suite's first journey checks
+the frame's src and that it has height.
 
 The PDF section retains an accessible heading without a visible title.
 Download PDF sits beside the live summary in a compact row that wraps on narrow
@@ -525,28 +526,23 @@ is its living label.
 
 ### Verification boundary
 
-`tests/test_web.py` runs under CPython in the existing CI matrix. `web` is on
-pytest's Python path, `kincade_web` is a local import for ruff, and both Python
-web files are in mypy's scope; JavaScript stays outside those Python tools.
-The build module is loaded by path to avoid shadowing PyPA's `build`.
-Tests cover atomic opens, privacy/search rows, both charts with every allowed
-key, filename/summary behavior, preview metadata against actual PDF page counts
-and MediaBoxes for pedigree Letter/A4 with index and large print on/off and all
-four fan papers, default geometry and metadata preservation on failure,
-invalid charts/keys/roots/generations, all three fan inks against direct
-planner/renderer output in invariant mode,
-empty-folder font fallback, both directions of chart/control mapping,
-manifest values and escaping/refusals, the exact two-file output and the four
-font pins. Static assembly checks cover the preview metadata bridge, responsive
-iframe wiring, height independent of document page count and absence of a fixed
-height; they do not execute a native viewer.
-CLI tests cover both shared summaries and unchanged output.
-`web/browser_tests` runs real Pyodide in an isolated full Chromium profile,
-checks PDF contents and native viewer behavior, and gates real Worker replies
-for deterministic ordering scenarios. The optional `browser` dependency group
-keeps the default native suite independent. The browser suite checks font and
-wheel integrity failures, an actual CSP response header and a mapped HTTP
-origin with `isSecureContext` false. It does not simulate a second physical device.
+`tests/test_web_worker.py` and `tests/test_site_build.py` run under CPython in the
+existing CI matrix. `web` is on pytest's Python path, `kincade_web` is a local import
+for ruff, and both Python web files are in mypy's scope; JavaScript stays outside
+those Python tools. The build module is loaded by path to avoid shadowing PyPA's
+`build`. `test_web_worker.py` runs the Python that `worker.js` hands to Pyodide and
+sends it requests in the shapes `app.js` sends: opens, search rows, root metadata,
+both charts with every page key against the library called directly, file names,
+summaries, preview metadata against the PDF's pages and MediaBox, settings
+validation, error replies and font fallback. `test_site_build.py` checks the
+two-file output, the manifest, escaping and refusals, the page controls against the
+worker's options, and the page text of every language.
+`web/browser_tests` runs five journeys with real Pyodide in an isolated full
+Chromium profile: the sample under an actual CSP response header, a user's own file
+with its options, privacy and one render-ordering check, a fresh install in a mounted
+folder over plain HTTP with `isSecureContext` false, font and wheel integrity
+failures, and the page languages. The optional `browser` dependency group keeps the
+default native suite independent. It does not simulate a second physical device.
 
 ## Chart planning
 
@@ -559,7 +555,7 @@ origin with `isSecureContext` false. It does not simulate a second physical devi
 - The same parents mode chooses the families for the boxes, the continuations, the fathers' marriage lines, the privacy estimate and the index.
 - Only the initial root box uses `Options.root_family` (`--root-family FAMILY`, TOML `root_family`) to pair a spouse name with one marriage. `None` retains exact first-FAMS behavior, even for a missing record. An override accepts a family record ID, including GEDCOM `@ID@` syntax and case-insensitive spelling, and requires the family to exist and name the root as a partner. It does not alter ancestor selection, continuation marriage context or index membership. Missing fields leave labels empty. Living spouse names use `living_name`, and either living partner hides the marriage values under privacy. Fan charts are unchanged. Blank charts ignore the selector and include an empty spouse row in the same enlarged, centered root box.
 
-**The generations limit.** With `--generations N`, a position is drawn only when `offset + box_generation(p) <= N`, and a continuation chart is made only when its boxes 2 and 3 are within the limit (`offset + 2 <= N`). So every chart but chart 1 has a known person in box 2 or 3, and an empty box appears only inside the requested range, where a known line runs out. A continuation number may name a chart that already exists, which obeys the same limit. `tests/test_generations.py` checks this for every root of the fixtures and of generated trees, at every limit from 1 to 9 and none, in both print sizes and both parent modes. The privacy estimate always uses the unlimited plan, so nobody's status depends on `N`.
+**The generations limit.** With `--generations N`, a position is drawn only when `offset + box_generation(p) <= N`, and a continuation chart is made only when its boxes 2 and 3 are within the limit (`offset + 2 <= N`). So every chart but chart 1 has a known person in box 2 or 3, and an empty box appears only inside the requested range, where a known line runs out. A continuation number may name a chart that already exists, which obeys the same limit. `tests/test_pedigree_pdf.py` checks this for every root of the fixtures and of generated trees, at every limit from 1 to 9 and none, in both print sizes and both parent modes. The privacy estimate always uses the unlimited plan, so nobody's status depends on `N`.
 
 ## Fan chart
 

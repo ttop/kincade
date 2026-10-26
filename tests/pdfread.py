@@ -90,37 +90,6 @@ def first_page(pdf):
     return streams(pdf)[0]
 
 
-def text_objects(pdf, page=0):
-    """Each BT … ET object's joined Tj text and RGB fill color, in drawing order.
-    Gray and RGB fills follow saved graphics states, including nested q / Q.
-    """
-    token = re.compile(
-        rb"\((?P<text>(?:\\.|[^\\)])*)\)\s*Tj"
-        rb"|(?P<rgb>[-\d.]+\s+[-\d.]+\s+[-\d.]+)\s+rg\b"
-        rb"|(?P<gray>[-\d.]+)\s+g\b"
-        rb"|(?<!\S)(?P<op>q|Q|BT|ET)(?!\S)",
-        re.DOTALL,
-    )
-    color, stack, joined, out = (0, 0, 0), [], [], []
-    for match in token.finditer(streams(pdf)[page]):
-        if match["text"] is not None:
-            joined.append(_text(match["text"]))
-        elif match["rgb"]:
-            color = tuple(map(float, match["rgb"].split()))
-        elif match["gray"]:
-            gray = float(match["gray"])
-            color = (gray, gray, gray)
-        elif match["op"] == b"q":
-            stack.append(color)
-        elif match["op"] == b"Q":
-            color = stack.pop()
-        elif match["op"] == b"BT":
-            joined = []
-        elif match["op"] == b"ET":
-            out.append(("".join(joined), color))
-    return out
-
-
 def text_matrix_objects(pdf, page=0):
     """Each nonempty BT … ET object's Tj runs with matrices in page coordinates.
 

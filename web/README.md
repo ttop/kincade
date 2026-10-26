@@ -74,7 +74,7 @@ its page wording in `web/lang/<code>.toml`, with the same keys and placeholders 
 `web/index.html` or `web/app.js`: the page builds both the header's language select
 and Chart language from the manifest's bundled languages, each option named in its
 own language. The build stops when the `web/lang` codes and the chart language files
-differ, and `tests/test_web.py` checks the keys, placeholders and select options.
+differ, and `tests/test_site_build.py` checks the keys, placeholders and select options.
 
 ## Update dependencies
 

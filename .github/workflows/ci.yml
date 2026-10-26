@@ -8,6 +8,7 @@ permissions:
 jobs:
   check:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -21,8 +22,10 @@ jobs:
       - name: Install Liberation fonts
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes fonts-liberation
+          if ! dpkg -s fonts-liberation >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes fonts-liberation
+          fi
       - run: uv sync --locked
       - run: uv run pytest -q
       - run: uv run ruff check

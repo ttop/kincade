@@ -13,7 +13,7 @@ uv run pytest -q   # the test suite, a few seconds
 
 - Every test runs isolated from the machine, by the autouse fixture in `tests/conftest.py`. The working folder is an empty temporary folder, and the home folder (`HOME`, and `USERPROFILE` for Windows) is an empty folder inside it, for subprocesses too. There is no per-user config file or language folder, and reportlab's `RL_*` overrides are cleared. `fonts="auto"` gives the base-14 fonts, silently, so no result depends on the fonts a machine has.
 - A test marked `@pytest.mark.system_fonts` lets `fonts="auto"` search for TrueType fonts as it does outside the tests. Use the marker only for tests of the font search and of embedding; `uv run pytest -q -m "not system_fonts"` leaves them out.
-- CI runs on Ubuntu, macOS and Windows with Python 3.11 and 3.14, on pushes and pull requests. It installs the locked dependencies and runs pytest, ruff check, ruff format --check and mypy. Ubuntu installs Liberation fonts. The full pytest run includes `system_fonts` tests; tests that require embedded fonts skip when none are available.
+- CI runs on Ubuntu, macOS and Windows with Python 3.11 and 3.14, on pushes and pull requests. It installs the locked dependencies and runs pytest, ruff check, ruff format --check and mypy. On Ubuntu it installs Liberation fonts when the runner image lacks them. Each job stops after 15 minutes. The full pytest run includes `system_fonts` tests; tests that require embedded fonts skip when none are available.
 - Test fixtures are invented. The GEDCOM files in `tests/fixtures/` and every tree
   a test builds use made-up names, such as Jane Doe. Never commit private family
   records. Public historical examples belong in `docs/examples/` and use

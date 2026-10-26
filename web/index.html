@@ -75,6 +75,7 @@
     .preview { position: relative; } iframe { display: block; width: 100%; border: 1px solid var(--border); border-radius: .35rem; }
     .rendering { position: absolute; top: .75rem; left: .75rem; margin: 0; padding: .4rem .8rem; border-radius: .3rem; background: var(--panel); border: 1px solid var(--border); }
     #root-family-field { margin-top: .65rem; }
+    #page-lang { width: auto; padding: .1rem .3rem; font-size: .85rem; }
     #root-prompt { margin: .5rem 0 0; font-size: .85rem; }
     .workspace, .controls-rail { display: grid; gap: .75rem; min-width: 0; }
     .workspace { margin-top: .75rem; align-items: start; }
@@ -85,33 +86,33 @@
     .option-fields .field:has(.check), .option-fields .field:has(#ink) { grid-column: 1 / -1; }
     #more-options > summary { width: fit-content; border-radius: .2rem; }
     #more-options > summary:focus-visible { outline-width: 2px; outline-offset: 2px; }
-    #more-options .field:has(.check), #more-options .field:has(input[type=text]), #custom-generations-field { grid-column: 1 / -1; }
+    #more-options .field:has(.check), #more-options .field:has(input[type=text]), #custom-generations-field, #chart-lang-field { grid-column: 1 / -1; }
     @media (min-width: 48rem) { .workspace { grid-template-columns: 19rem minmax(0, 1fr); } }
   </style>
 </head>
 <body>
 <main>
   <header>
-    <div class="title-row"><h1>Kincade</h1><p>Make a cascading pedigree or fan chart PDF from a GEDCOM file</p><div class="header-metadata"><span id="version">Version</span><a href="https://github.com/ttop/kincade">GitHub</a></div></div>
-    <p class="muted">Your GEDCOM file is read in this browser and never uploaded.</p>
+    <div class="title-row"><h1>Kincade</h1><p data-i18n="page.tagline">Make a cascading pedigree or fan chart PDF from a GEDCOM file</p><div class="header-metadata"><select id="page-lang" aria-label="Page language" data-i18n-aria-label="page.language"><option value="en" lang="en" selected>English</option></select><span id="version">Version</span><a href="https://github.com/ttop/kincade">GitHub</a></div></div>
+    <p class="muted" data-i18n="page.privacy">Your GEDCOM file is read in this browser and never uploaded.</p>
   </header>
-  <div role="status" aria-live="polite"><span id="status">Loading Kincade…</span></div>
-  <button id="retry" type="button" hidden>Retry</button>
+  <div role="status" aria-live="polite"><span id="status" data-i18n="status.loading">Loading Kincade…</span></div>
+  <button id="retry" type="button" data-i18n="status.retry" hidden>Retry</button>
   <div class="workspace">
   <div class="controls-rail">
   <section aria-labelledby="tree-heading">
-    <div class="section-heading"><h2 id="tree-heading">Family tree</h2><button id="sample" type="button">See an example</button></div>
+    <div class="section-heading"><h2 id="tree-heading" data-i18n="tree.heading">Family tree</h2><button id="sample" type="button" data-i18n="tree.sample">See an example</button></div>
     <div id="drop-zone" class="drop-zone">
-      <button id="choose-file" type="button" aria-describedby="file-summary">Choose file</button>
-      <span id="file-summary">Choose or drop a GEDCOM file (5.5, 5.5.1, or 7.0)</span>
-      <input id="file" type="file" accept=".ged,.gedcom" aria-label="Choose GEDCOM file" hidden>
+      <button id="choose-file" type="button" aria-describedby="file-summary" data-i18n="tree.choose">Choose file</button>
+      <span id="file-summary" data-i18n="tree.hint">Choose or drop a GEDCOM file (5.5, 5.5.1, or 7.0)</span>
+      <input id="file" type="file" accept=".ged,.gedcom" aria-label="Choose GEDCOM file" data-i18n-aria-label="tree.input" hidden>
     </div>
     <div id="open-error" class="error" role="alert" hidden></div>
   </section>
   <section aria-labelledby="root-heading">
-    <h2 id="root-heading">Root person</h2>
+    <h2 id="root-heading" data-i18n="root.heading">Root person</h2>
     <fieldset id="root-controls" disabled>
-      <label for="search">Search by name or record ID</label>
+      <label for="search" data-i18n="root.search">Search by name or record ID</label>
       <div class="root-picker">
         <input id="search" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="results" aria-expanded="false" aria-describedby="root-summary">
         <button id="root-action" type="button" aria-label="Open person list">
@@ -120,50 +121,51 @@
         </button>
         <div id="root-choices" hidden>
           <p id="result-summary" class="muted" role="status"></p>
-          <ul id="results" class="results" role="listbox" aria-label="Matching people"></ul>
+          <ul id="results" class="results" role="listbox" aria-label="Matching people" data-i18n-aria-label="root.matching"></ul>
         </div>
       </div>
-      <p id="root-summary" class="visually-hidden" aria-live="polite">Choose a root person.</p>
-      <p id="root-prompt" class="error" role="status" hidden>Choose a root person to see the chart.</p>
+      <p id="root-summary" class="visually-hidden" aria-live="polite" data-i18n="root.choose">Choose a root person.</p>
+      <p id="root-prompt" class="error" role="status" data-i18n="root.prompt" hidden>Choose a root person to see the chart.</p>
     </fieldset>
-    <div id="root-family-field" class="field" hidden><label for="root-family">Root marriage</label><select id="root-family" data-option="root_family" data-charts="pedigree" disabled><option value="" selected>First recorded marriage</option></select></div>
+    <div id="root-family-field" class="field" hidden><label for="root-family" data-i18n="family.label">Root marriage</label><select id="root-family" data-option="root_family" data-charts="pedigree" disabled><option value="" selected>First recorded marriage</option></select></div>
   </section>
   <section aria-labelledby="options-heading">
-    <h2 id="options-heading">Options</h2>
+    <h2 id="options-heading" data-i18n="options.heading">Options</h2>
     <fieldset id="option-controls" disabled>
       <fieldset>
-        <legend>Chart</legend>
+        <legend data-i18n="options.chart">Chart</legend>
         <div class="segments">
-          <label for="chart-pedigree"><input id="chart-pedigree" type="radio" name="chart" value="pedigree" checked> Pedigree</label>
-          <label for="chart-fan"><input id="chart-fan" type="radio" name="chart" value="fan"> Fan</label>
+          <label for="chart-pedigree"><input id="chart-pedigree" type="radio" name="chart" value="pedigree" checked> <span data-i18n="options.pedigree">Pedigree</span></label>
+          <label for="chart-fan"><input id="chart-fan" type="radio" name="chart" value="fan"> <span data-i18n="options.fan">Fan</span></label>
         </div>
       </fieldset>
       <div class="fields option-fields">
-        <div class="field" data-charts="pedigree"><label for="pedigree-generation-choice">Generations</label><select id="pedigree-generation-choice"><option value="all" selected>All generations</option><option value="custom">Custom…</option></select></div>
-        <div class="field" data-charts="fan" hidden><label for="fan-generations">Generations</label><select id="fan-generations" data-option="generations" data-charts="fan"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option></select></div>
-        <div class="field" data-charts="pedigree"><label class="paper-label" for="pedigree-paper">Paper <span class="orientation">Portrait</span></label><select id="pedigree-paper" data-option="paper" data-charts="pedigree"><option value="letter" selected>Letter</option><option value="a4">A4</option></select></div>
-        <div class="field" data-charts="fan" hidden><label class="paper-label" for="fan-paper">Paper <span class="orientation">Landscape</span></label><select id="fan-paper" data-option="paper" data-charts="fan"><option value="letter" selected>Letter</option><option value="a4">A4</option><option value="tabloid">Tabloid</option><option value="a3">A3</option></select></div>
-        <div class="field" data-charts="pedigree"><label class="check" for="large-print"><input id="large-print" type="checkbox" data-option="large_print" data-charts="pedigree"> Large print</label></div>
-        <div class="field" data-charts="fan" hidden><label for="ink">Ink</label><select id="ink" data-option="ink" data-charts="fan"><option value="color" selected>Color</option><option value="grayscale">Grayscale</option><option value="bw">Black and white</option></select></div>
-        <div class="field" data-charts="pedigree fan"><label class="check" for="exclude-private"><input id="exclude-private" type="checkbox" data-option="exclude_private" data-charts="pedigree fan"> Hide living people</label></div>
+        <div class="field" data-charts="pedigree"><label for="pedigree-generation-choice" data-i18n="options.generations">Generations</label><select id="pedigree-generation-choice"><option value="all" selected>All generations</option><option value="custom">Custom…</option></select></div>
+        <div class="field" data-charts="fan" hidden><label for="fan-generations" data-i18n="options.generations">Generations</label><select id="fan-generations" data-option="generations" data-charts="fan"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option><option>7</option></select></div>
+        <div class="field" data-charts="pedigree"><label class="paper-label" for="pedigree-paper"><span data-i18n="options.paper">Paper</span> <span class="orientation" data-i18n="options.portrait">Portrait</span></label><select id="pedigree-paper" data-option="paper" data-charts="pedigree"><option value="letter" data-i18n="options.letter" selected>Letter</option><option value="a4">A4</option></select></div>
+        <div class="field" data-charts="fan" hidden><label class="paper-label" for="fan-paper"><span data-i18n="options.paper">Paper</span> <span class="orientation" data-i18n="options.landscape">Landscape</span></label><select id="fan-paper" data-option="paper" data-charts="fan"><option value="letter" data-i18n="options.letter" selected>Letter</option><option value="a4">A4</option><option value="tabloid" data-i18n="options.tabloid">Tabloid</option><option value="a3">A3</option></select></div>
+        <div class="field" data-charts="pedigree"><label class="check" for="large-print"><input id="large-print" type="checkbox" data-option="large_print" data-charts="pedigree"> <span data-i18n="options.largePrint">Large print</span></label></div>
+        <div class="field" data-charts="fan" hidden><label for="ink" data-i18n="options.ink">Ink</label><select id="ink" data-option="ink" data-charts="fan"><option value="color" data-i18n="options.color" selected>Color</option><option value="grayscale" data-i18n="options.grayscale">Grayscale</option><option value="bw" data-i18n="options.bw">Black and white</option></select></div>
+        <div class="field" data-charts="pedigree fan"><label class="check" for="exclude-private"><input id="exclude-private" type="checkbox" data-option="exclude_private" data-charts="pedigree fan"> <span data-i18n="options.hideLiving">Hide living people</span></label></div>
       </div>
       <details id="more-options">
-        <summary>More options</summary>
+        <summary data-i18n="options.more">More options</summary>
         <div class="fields">
-          <div id="custom-generations-field" class="field" data-charts="pedigree" hidden><label for="pedigree-generations">Custom generations</label><input id="pedigree-generations" type="number" min="1" step="1" placeholder="all" data-option="generations" data-charts="pedigree" aria-describedby="generations-help generations-error"><p id="generations-help" class="muted">Leave empty for all generations.</p><p id="generations-error" class="error" hidden>Enter a whole number of at least 1, or leave empty for all generations.</p></div>
-          <div class="field" data-charts="pedigree"><label class="check" for="empty-boxes"><input id="empty-boxes" type="checkbox" data-option="empty_boxes" data-charts="pedigree"> Leave out unknown ancestors</label></div>
-          <div class="field" data-charts="pedigree fan"><label class="check" for="preserve-case"><input id="preserve-case" type="checkbox" checked data-option="preserve_case" data-charts="pedigree fan"> Last name UPPERCASE</label></div>
-          <div class="field" data-charts="pedigree"><label class="check" for="show-ids"><input id="show-ids" type="checkbox" data-option="show_ids" data-charts="pedigree"> Show record IDs</label></div>
-          <div class="field" data-charts="pedigree fan"><label class="check" for="adoptive-parents"><input id="adoptive-parents" type="checkbox" data-option="adoptive_parents" data-charts="pedigree fan"> Draw adoptive and foster parents</label></div>
-          <div class="field" data-charts="pedigree fan"><label class="check" for="event-standins"><input id="event-standins" type="checkbox" checked data-option="event_standins" data-charts="pedigree fan"> Christenings and burials stand in for missing births and deaths</label></div>
-          <div class="field" data-charts="pedigree"><label class="check" for="shorten-places"><input id="shorten-places" type="checkbox" checked data-option="shorten_places" data-charts="pedigree"> Shorten long places</label></div>
-          <div class="field" data-charts="pedigree"><label class="check" for="shadow"><input id="shadow" type="checkbox" data-option="shadow" data-charts="pedigree"> Drop shadow</label></div>
-          <div class="field" data-charts="pedigree"><label for="pedigree-title">Title</label><input id="pedigree-title" type="text" placeholder="Cascading Pedigree — Root's name" data-option="title" data-charts="pedigree"></div>
-          <div class="field" data-charts="fan" hidden><label for="fan-title">Title</label><input id="fan-title" type="text" placeholder="Root's name — Fan chart" data-option="title" data-charts="fan"></div>
-          <div class="field" data-charts="pedigree fan"><label for="footer">Footer</label><input id="footer" type="text" placeholder="Created &lt;today's date&gt; using Kincade" data-option="footer" data-charts="pedigree fan"></div>
-          <div class="field" data-charts="pedigree fan"><label class="check" for="no-footer"><input id="no-footer" type="checkbox" data-option="footer" data-charts="pedigree fan"> No footer</label></div>
-          <div class="field" data-charts="pedigree"><label class="check" for="page-numbers"><input id="page-numbers" type="checkbox" checked data-option="page_numbers" data-charts="pedigree"> Page numbers</label></div>
-          <div class="field" data-charts="pedigree"><label class="check" for="index"><input id="index" type="checkbox" checked data-option="index" data-charts="pedigree"> Name index</label></div>
+          <div id="custom-generations-field" class="field" data-charts="pedigree" hidden><label for="pedigree-generations" data-i18n="options.customGenerations">Custom generations</label><input id="pedigree-generations" type="number" min="1" step="1" placeholder="all" data-i18n-placeholder="options.all" data-option="generations" data-charts="pedigree" aria-describedby="generations-help generations-error"><p id="generations-help" class="muted" data-i18n="options.generationsHelp">Leave empty for all generations.</p><p id="generations-error" class="error" data-i18n="options.generationsError" hidden>Enter a whole number of at least 1, or leave empty for all generations.</p></div>
+          <div id="chart-lang-field" class="field" data-charts="pedigree fan"><label for="chart-lang" data-i18n="options.chartLanguage">Chart language</label><select id="chart-lang" data-option="lang" data-charts="pedigree fan"><option value="en" lang="en" selected>English</option></select></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="empty-boxes"><input id="empty-boxes" type="checkbox" data-option="empty_boxes" data-charts="pedigree"> <span data-i18n="options.emptyBoxes">Leave out unknown ancestors</span></label></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="preserve-case"><input id="preserve-case" type="checkbox" checked data-option="preserve_case" data-charts="pedigree fan"> <span data-i18n="options.uppercase">Last name UPPERCASE</span></label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="show-ids"><input id="show-ids" type="checkbox" data-option="show_ids" data-charts="pedigree"> <span data-i18n="options.showIds">Show record IDs</span></label></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="adoptive-parents"><input id="adoptive-parents" type="checkbox" data-option="adoptive_parents" data-charts="pedigree fan"> <span data-i18n="options.adoptive">Draw adoptive and foster parents</span></label></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="event-standins"><input id="event-standins" type="checkbox" checked data-option="event_standins" data-charts="pedigree fan"> <span data-i18n="options.standins">Christenings and burials stand in for missing births and deaths</span></label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="shorten-places"><input id="shorten-places" type="checkbox" checked data-option="shorten_places" data-charts="pedigree"> <span data-i18n="options.shortenPlaces">Shorten long places</span></label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="shadow"><input id="shadow" type="checkbox" data-option="shadow" data-charts="pedigree"> <span data-i18n="options.shadow">Drop shadow</span></label></div>
+          <div class="field" data-charts="pedigree"><label for="pedigree-title" data-i18n="options.title">Title</label><input id="pedigree-title" type="text" placeholder="Cascading Pedigree — Root's name" data-option="title" data-charts="pedigree"></div>
+          <div class="field" data-charts="fan" hidden><label for="fan-title" data-i18n="options.title">Title</label><input id="fan-title" type="text" placeholder="Root's name — Fan chart" data-option="title" data-charts="fan"></div>
+          <div class="field" data-charts="pedigree fan"><label for="footer" data-i18n="options.footer">Footer</label><input id="footer" type="text" placeholder="Created &lt;today's date&gt; using Kincade" data-option="footer" data-charts="pedigree fan"></div>
+          <div class="field" data-charts="pedigree fan"><label class="check" for="no-footer"><input id="no-footer" type="checkbox" data-option="footer" data-charts="pedigree fan"> <span data-i18n="options.noFooter">No footer</span></label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="page-numbers"><input id="page-numbers" type="checkbox" checked data-option="page_numbers" data-charts="pedigree"> <span data-i18n="options.pageNumbers">Page numbers</span></label></div>
+          <div class="field" data-charts="pedigree"><label class="check" for="index"><input id="index" type="checkbox" checked data-option="index" data-charts="pedigree"> <span data-i18n="options.index">Name index</span></label></div>
         </div>
       </details>
     </fieldset>
@@ -172,11 +174,11 @@
   <div class="chart-area">
   <div id="request-error" class="error" role="alert" hidden></div>
   <section id="pdf-section" aria-labelledby="pdf-heading" hidden>
-    <h2 id="pdf-heading" class="visually-hidden">PDF</h2>
-    <div class="pdf-details"><p id="pdf-summary" role="status"></p><a id="download-pdf" class="action">Download PDF</a><a id="open-pdf" class="action" target="_blank" rel="noopener">Open PDF</a></div>
-    <div id="preview" class="preview" hidden><iframe id="pdf-frame" title="Family chart PDF preview"></iframe><p id="rendering-overlay" class="rendering" hidden>Rendering…</p></div>
+    <h2 id="pdf-heading" class="visually-hidden" data-i18n="pdf.heading">PDF</h2>
+    <div class="pdf-details"><p id="pdf-summary" role="status"></p><a id="download-pdf" class="action" data-i18n="pdf.download">Download PDF</a><a id="open-pdf" class="action" target="_blank" rel="noopener" data-i18n="pdf.open">Open PDF</a></div>
+    <div id="preview" class="preview" hidden><iframe id="pdf-frame" title="Family chart PDF preview" data-i18n-title="pdf.preview"></iframe><p id="rendering-overlay" class="rendering" data-i18n="pdf.rendering" hidden>Rendering…</p></div>
   </section>
-  <p id="render-status" role="status" hidden>Rendering…</p>
+  <p id="render-status" role="status" data-i18n="pdf.rendering" hidden>Rendering…</p>
   </div>
   </div>
 </main>

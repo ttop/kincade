@@ -6,7 +6,7 @@ Kincade uses [uv](https://docs.astral.sh/uv/). In a clone:
 
 ```sh
 uv sync            # Python 3.11 or later, reportlab and the dev tools
-uv run pytest -q   # the test suite, about ten seconds
+uv run pytest -q   # the test suite, a few seconds
 ```
 
 ## Tests
@@ -114,13 +114,13 @@ or failed downloads fail with diagnostics. Native CPython tests remain separate
 and run without browser dependencies. [Browser acceptance](docs/browser-acceptance.md)
 describes coverage, browser selection and the scope of HTTP checks.
 
-The harness observes and holds real Worker messages to exercise stale results,
-render ordering and replacement-file recovery deterministically. It checks real
-PDF bytes, text, fonts, geometry and drawing paths as well as page behavior; it
-adds no testing hooks to the deployed page. Profiles and build caches live under
+The harness observes and holds real Worker messages, which one journey uses to
+check render ordering. The journeys check real PDF bytes, text and fonts as well as
+page behavior; the harness adds no testing hooks to the deployed page. Profiles and build caches live under
 ignored `web/.cache/`; each profile and HTTP server are cleaned up after the run.
-For a browser finding, add a reproducing browser test, fix the owning source,
-and rerun that scenario and the native checks before committing.
+For a browser finding, add a test at the worker boundary in
+`tests/test_web_worker.py`, fix the owning source, and rerun the Python tests and the
+journeys before committing. Extend a journey only for behavior only the browser shows.
 
 ### Dependency updates
 
@@ -132,7 +132,7 @@ and rerun that scenario and the native checks before committing.
   release, then update their URLs and SHA-256 values in `web/fonts.json`. Keep
   the four filenames used by `FONT_FILES`. An intentional CDN/package version
   change also updates `FONT_BASE` validation in `web/build.py`. Rebuild and
-  rerun automated acceptance, especially embedded fonts and blocked-font fallback.
+  rerun automated acceptance, especially embedded fonts and font fallback.
 - **reportlab:** use `uv lock --upgrade-package reportlab` within the dependency
   range in `pyproject.toml`. The build derives the exact requirement from
   `uv.lock`; do not add a separate version constant. Run the Python checks,

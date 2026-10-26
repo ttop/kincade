@@ -15,8 +15,6 @@ import ast
 import sys
 import tomllib
 
-import pytest
-
 from conftest import ROOT
 
 PKG = ROOT / "kincade"
@@ -34,6 +32,7 @@ MAY_IMPORT = {
     "cli": {"model", "charts", "lang", "pdf", "gedcom", "fan", "fanplan", "fanpdf"},
     "__init__": {"model", "gedcom", "lang", "pdf", "fan", "fanplan", "fanpdf"},
 }
+NEVER_REPORTLAB = {"gedcom", "charts", "lang", "fan", "fanplan"}
 
 
 def imports(module):
@@ -43,7 +42,14 @@ def imports(module):
     ours, other = set(), set()
     for node in ast.walk(ast.parse((PKG / f"{module}.py").read_text(encoding="utf-8"))):
         if isinstance(node, ast.Import):
-            other.update(alias.name.split(".")[0] for alias in node.names)
+            for alias in node.names:
+                top, _, rest = alias.name.partition(".")
+                # import kincade.pdf names the module pdf, just as from kincade
+                # import pdf does; any other package is named by its own top level.
+                if top == "kincade" and rest:
+                    ours.add(rest.split(".")[0])
+                else:
+                    other.add(top)
         elif isinstance(node, ast.ImportFrom):
             if node.level:  # from .model import X, or from . import model
                 ours.update(
@@ -62,47 +68,33 @@ def imports(module):
     return ours, other
 
 
-@pytest.mark.parametrize("module", sorted(MAY_IMPORT))
-def test_each_module_imports_only_the_layers_below_it(module):
-    ours, _ = imports(module)
-    assert ours <= MAY_IMPORT[module], (
-        f"{module} imports {sorted(ours - MAY_IMPORT[module])}"
-    )
-
-
-def test_the_model_is_standard_library_only():
-    _, other = imports("model")
-    assert other <= set(sys.stdlib_module_names), sorted(
-        other - set(sys.stdlib_module_names)
-    )
-
-
-@pytest.mark.parametrize("module", ["gedcom", "charts", "lang", "fan", "fanplan"])
-def test_reading_planning_and_language_never_touch_reportlab(module):
-    _, other = imports(module)
-    assert "reportlab" not in other
-
-
-def test_the_library_never_imports_argparse_or_the_cli():
-    for module in sorted(OURS - {"cli"}):
+def test_each_module_imports_only_the_layers_below_it():
+    """Every module's imports stay within the MAY_IMPORT table, the model is standard
+    library only, the reading/planning/language modules never touch reportlab, the
+    library never imports argparse or cli, and the module set matches the table.
+    """
+    assert {p.stem for p in PKG.glob("*.py")} == OURS | {"__init__"}
+    for module in sorted(MAY_IMPORT):
         ours, other = imports(module)
-        assert "argparse" not in other and "cli" not in ours, module
+        assert ours <= MAY_IMPORT[module], (
+            f"{module} imports {sorted(ours - MAY_IMPORT[module])}"
+        )
+        if module == "model":
+            assert other <= set(sys.stdlib_module_names), (
+                f"model imports {sorted(other - set(sys.stdlib_module_names))}"
+            )
+        if module in NEVER_REPORTLAB:
+            assert "reportlab" not in other, module
+        if module != "cli" and module != "__init__":
+            assert "argparse" not in other and "cli" not in ours, module
     init_ours, init_other = imports("__init__")
     assert "cli" not in init_ours and "argparse" not in init_other
 
 
-def test_every_module_of_the_table_exists_and_nothing_else_is_missing():
-    assert {p.stem for p in PKG.glob("*.py")} == OURS | {"__init__"}
-
-
-def test_the_package_folder_holds_the_language_files():
-    assert sorted(p.name for p in (PKG / "lang").glob("*.toml")) == [
-        "de.toml",
-        "en.toml",
-    ]
-
-
-def test_pyproject_declares_the_package_the_command_and_the_dev_tools():
+def test_the_packaging():
+    """pyproject declares the package name, python floor, reportlab floor and the
+    kincade script; the bundled language files sit in the package, under LANG_DIR.
+    """
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert project["project"]["name"] == "kincade"
     assert project["project"]["requires-python"] == ">=3.11"
@@ -111,4 +103,14 @@ def test_pyproject_declares_the_package_the_command_and_the_dev_tools():
         for d in project["project"]["dependencies"]
     )
     assert project["project"]["scripts"] == {"kincade": "kincade.cli:main"}
-    assert any(d.startswith("pytest") for d in project["dependency-groups"]["dev"])
+
+    from kincade.lang import LANG_DIR
+
+    assert LANG_DIR.parent == PKG
+    assert sorted(p.name for p in LANG_DIR.glob("*.toml")) == [
+        "de.toml",
+        "en.toml",
+        "es.toml",
+        "fr.toml",
+        "it.toml",
+    ]

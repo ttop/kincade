@@ -18,7 +18,14 @@ from .charts import (
     plan_charts,
 )
 from .fan import Fan, FanCell, full_name, ring_of
-from .lang import PLACEHOLDERS, fill, fmt_surname, format_date, load_strings
+from .lang import (
+    PLACEHOLDERS,
+    SortRules,
+    fill,
+    fmt_surname,
+    format_date,
+    load_strings,
+)
 from .model import Date, Day, Event, Person, Tree
 
 LINE_COLORS: dict[str, dict[str | int, str | None]] = {
@@ -89,11 +96,27 @@ def _years(person: Person, event_standins: bool, strings: Mapping[str, Any]) -> 
     death, death_label = death_source(person, event_standins)
     born = _event_years(birth, birth_label, strings)
     died = _event_years(death, death_label, strings)
+    # born_only and died_only are for a birth or death year; a stand-in or the deceased
+    # word alone fills lifespan, with the other side empty
+    key = (
+        "born_only"
+        if born and not died and birth_label == "birth"
+        else "died_only"
+        if died and not born and death_label == "death"
+        else "lifespan"
+    )
     if not died and (
         person.death is not None or death_label in ("burial", "cremation")
     ):
         died = strings["years"]["deceased"]
-    return f"{born}–{died}" if born or died else ""
+        key = "lifespan"
+    if not (born or died):
+        return ""
+    return fill(
+        strings["years"][key],
+        PLACEHOLDERS[f"years.{key}"],
+        {"born": born, "died": died},
+    )
 
 
 def _line_color(slot: int, ink: str) -> str | None:
@@ -153,6 +176,7 @@ def plan_fan(
             father, mother = tree.parent_ids(pid, prefer)
             seats.extend(((2 * slot, father), (2 * slot + 1, mother)))
     copies = Counter(pid for _, pid in seats if pid is not None)
+    rules = SortRules(strings["sort"])
     cells = []
     for slot, pid in seats:
         if pid is None:
@@ -165,7 +189,9 @@ def plan_fan(
                 slot,
                 title="" if hide else person.prefix,
                 given=strings["living_name"] if hide else person.given,
-                surname="" if hide else fmt_surname(person.surname, preserve_case),
+                surname=""
+                if hide
+                else fmt_surname(person.surname, preserve_case, rules),
                 suffix="" if hide else person.suffix,
                 years="" if hide else _years(person, event_standins, strings),
                 fill=_line_color(slot, ink),

@@ -20,20 +20,10 @@ for _key in list(os.environ):
 import kincade.cli  # noqa: E402
 import kincade.lang  # noqa: E402
 import kincade.pdf  # noqa: E402
-from kincade.charts import page_depth, plan_charts  # noqa: E402
 from kincade.gedcom import read_gedcom  # noqa: E402
-from kincade.model import (  # noqa: E402
-    Date,
-    Day,
-    Event,
-    Family,
-    ParentLink,
-    Person,
-    Tree,
-)
-from kincade.pdf import Options, render_pdf  # noqa: E402
+from kincade.pdf import Options  # noqa: E402
 
-from pdfread import count_pages, drawn, pages, rectangles  # noqa: E402
+from pdfread import drawn  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # the repository
 FIX = ROOT / "tests" / "fixtures"
@@ -84,13 +74,6 @@ def isolated_from_the_machine(tmp_path, monkeypatch, request):
 
 
 @pytest.fixture
-def user_files():
-    """The real (config file, language folder) functions, which the autouse fixture
-    replaces."""
-    return USER_CONFIG_FILE, USER_LANG_DIR
-
-
-@pytest.fixture
 def no_home_folder(monkeypatch):
     """No home folder can be found, as in some containers: Path.home() raises
     RuntimeError. The per-user config file and language folder are looked for as the
@@ -122,13 +105,7 @@ def seven(*lines):
     return ged("0 HEAD", "1 GEDC", "2 VERS 7.0", *lines)
 
 
-def five(*lines):
-    """A GEDCOM 5.5.1 file in UTF-8."""
-    return ged("0 HEAD", "1 GEDC", "2 VERS 5.5.1", "1 CHAR UTF-8", *lines)
-
-
 HUGE = "9" * 4301  # more digits than Python's int() will convert
-TOO_LONG = "x" * 300  # longer than the 255 bytes a file name may have
 
 
 def short(value):
@@ -209,41 +186,19 @@ def render_charts(tree, root="I1", generations=None, parents="birth", **opts):
     return render(tree, root, generations, parents, **opts)
 
 
-def full_chart(large_print=False, **opts):
-    """render_charts of full_pedigree as deep as a chart page of the print size: one
-    chart in which every box holds a known person. It checks the PDF before returning
-    it: the name of I(p) is drawn inside box p, the p-th box drawn, and in no other
-    box."""
-    depth = page_depth(large_print)
-    pdf = render_charts(full_pedigree(depth), large_print=large_print, **opts)
-    boxes = rectangles(pdf, "B*")
-    names = [
-        run
-        for run in pages(pdf)[0]
-        if run.text.startswith("Person") and run.text.endswith(" FULL")
-    ]
-    assert count_pages(pdf) == 1
-    assert len(boxes) == len(names) == 2**depth - 1
-    for pos, (x, top, w, h) in enumerate(boxes, 1):
-        inside = [
-            run.text
-            for run in names
-            if x <= run.x and run.right() <= x + w and top <= run.y <= top + h
-        ]
-        assert inside == [f"Person{pos} FULL"]
-    return pdf
+@pytest.fixture
+def frozen_today(monkeypatch):
+    """Freeze datetime.date.today() at TODAY. Two renders that each default to
+    "today" (Options(today=None)) would otherwise be compared across a real midnight
+    boundary and could disagree; this makes both see the same fixed date."""
 
+    class FrozenDate(datetime.date):
+        @classmethod
+        def today(cls):
+            return TODAY
 
-def render_chart(tree, number=1, large_print=False, **opts):
-    """Chart `number` of I1's pedigree on its own, planned for the print size: a
-    one-page PDF with the test defaults."""
-    chart = plan_charts(tree, "I1", None, "birth", large_print)[number - 1]
-    opts.setdefault("today", TODAY)
-    opts.setdefault("fonts", "base14")
-    opts.setdefault("compress", False)
-    return render_pdf(
-        [chart], tree, Options(large_print=large_print, index=False, **opts)
-    )
+    monkeypatch.setattr(datetime, "date", FrozenDate)
+    return TODAY
 
 
 @pytest.fixture
@@ -258,21 +213,6 @@ def rendered_options(monkeypatch):
         return real(tree, root, opts)
 
     monkeypatch.setattr(kincade.cli, "render_with_counts", spy)
-    return seen
-
-
-@pytest.fixture
-def drawn_charts(monkeypatch):
-    """(charts, options) of each document drawn, in order: render plans the charts and
-    draws them with _draw_document. The PDF is made as usual."""
-    seen = []
-    real = kincade.pdf._draw_document
-
-    def spy(charts, tree, opts):
-        seen.append((charts, opts))
-        return real(charts, tree, opts)
-
-    monkeypatch.setattr(kincade.pdf, "_draw_document", spy)
     return seen
 
 
@@ -313,49 +253,6 @@ def secret_shown(tree, root="I1", **opts):
     return f"bp. {SECRETVILLE}" in drawn(pdf)
 
 
-# ---------------------------------------------------------------- Tom, built in code
-
-
-def built_person(pid, given, born=None, died=None, place="", parents=(), families=()):
-    """A Person of the Pell family, built in code: born and died in those years."""
-    return Person(
-        pid,
-        given=given,
-        surname="Pell",
-        birth=Event(Date("exact", Day(born)) if born else None, place),
-        death=Event(Date("exact", Day(died))) if died else None,
-        parents=list(parents),
-        families=list(families),
-    )
-
-
-def tom_tree(*links, bob=False):
-    """Tom and the family f1 of his mother Mary and her husband John (married 1950 in
-    Reno). `links` are Tom's ParentLinks, in order; the default is one to f1 with John
-    as his stepfather. With bob, Bob is Tom's birth father: f2 is Bob and Mary's family
-    (married 1940), and Tom belongs to it by birth unless `links` say otherwise."""
-    step = ParentLink("f1", "step", "birth")
-    links = links or ((step, ParentLink("f2")) if bob else (step,))
-    people = {
-        "tom": built_person("tom", "Tom", 1900, 1980, parents=links),
-        "mary": built_person(
-            "mary", "Mary", 1875, 1950, families=["f1", "f2"] if bob else ["f1"]
-        ),
-        "john": built_person("john", "John", 1870, 1940, families=["f1"]),
-    }
-    families = {
-        "f1": Family(
-            "f1", "john", "mary", Event(Date("exact", Day(1950)), "Reno"), ["tom"]
-        )
-    }
-    if bob:
-        people["bob"] = built_person("bob", "Bob", 1872, 1930, families=["f2"])
-        families["f2"] = Family(
-            "f2", "bob", "mary", Event(Date("exact", Day(1940)), "Dayton"), ["tom"]
-        )
-    return Tree(people, families)
-
-
 # ---------------------------------------------------------------- Kid's families
 
 KID, ADAM, ADA, BERT, BEA, CARL, CORA = "I1", "I2", "I3", "I4", "I5", "I6", "I7"
@@ -377,22 +274,19 @@ def indi(xref, name, famc=()):
     return lines
 
 
-def kid_tree(famc, status=None, inline=False, parents_of=None):
+def kid_tree(famc, status=None, inline=False):
     """Kid (I1) with the FAMC list [(family, PEDI or "")], in a file with three families
     that each have Kid as a child: F1 (Adam and Ada, married 1950), F2 (Bert and Bea,
     1960) and F3 (Carl and Cora, 1970). `status` is {family: CSTA text} on Kid's CHIL
     line in that family, which Kincade ignores: a level-0 CSTA record placed after the
-    families, as some programs write it, or with `inline` the text itself. `parents_of`
-    gives the parents of Adam (I2) as FAMC entries of a further family F9 (Zed and Zoe).
+    families, as some programs write it, or with `inline` the text itself.
     """
     lines = ["0 HEAD"] + indi(KID, "Kid /KID/", famc)
-    lines += indi(ADAM, "Adam /ONE/", parents_of or ()) + indi(ADA, "Ada /ONE/")
+    lines += indi(ADAM, "Adam /ONE/") + indi(ADA, "Ada /ONE/")
     lines += (
         indi(BERT, "Bert /TWO/") + indi(BEA, "Bea /TWO/") + indi(CARL, "Carl /THREE/")
     )
-    lines += (
-        indi(CORA, "Cora /THREE/") + indi("I8", "Zed /NINE/") + indi("I9", "Zoe /NINE/")
-    )
+    lines += indi(CORA, "Cora /THREE/")
     csta_records = {}
     for fam, husb, wife, year in (
         ("F1", ADAM, ADA, 1950),
@@ -413,19 +307,6 @@ def kid_tree(famc, status=None, inline=False, parents_of=None):
         elif text:
             pointer = csta_records.setdefault(text, f"@C{len(csta_records) + 1}@")
             lines.append(f"2 CSTA {pointer}")
-    lines += [
-        "0 @F9@ FAM",
-        "1 HUSB @I8@",
-        "1 WIFE @I9@",
-        "1 MARR",
-        "2 DATE 1920",
-        f"1 CHIL @{ADAM}@",
-    ]
     for text, pointer in csta_records.items():
         lines += [f"0 {pointer} CSTA", f"1 TEXT {text}"]
     return read_gedcom(ged(*lines))
-
-
-def parents_of(tree, pid=KID, prefer="birth"):
-    """The parents drawn for `pid`: (father, mother)."""
-    return tree.parent_ids(pid, prefer)

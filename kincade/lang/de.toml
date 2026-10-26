@@ -15,11 +15,11 @@
 title = "Ahnentafel"
 
 # Name for a living person when --exclude-private is enabled.
-living_name = "Lebend"
+living_name = "Lebende Person"
 
 # Fan page title: Fächerahnentafel names the fan-shaped ancestor chart.
 # {name} is the center person's name.
-fan_title = "{name} — Fächerahnentafel"
+fan_title = "Fächerahnentafel — {name}"
 
 # Default pedigree heading and PDF Title metadata.
 meta_title = "{title} — {name}"
@@ -34,6 +34,7 @@ footer_blank = "Erstellt mit Kincade"
 # the day ("3. März 1903").
 date_format = "{day}. {month} {year}"
 
+
 # Chart label, top right.
 chart_label = "Tafel {n}"
 
@@ -42,7 +43,7 @@ continuation = "Nr. 1 auf dieser Tafel ist identisch mit Nr. {pos} auf Tafel {ch
 
 # Line under the header of Tafel 1 when it has continuation charts. An empty string
 # leaves it off.
-chart_note = "Fortsetzung auf der Tafel mit der Nummer in der letzten Spalte."
+chart_note = "Die Ahnen der letzten Spalte folgen auf der daneben genannten Tafel."
 
 # Marks text that is cut short to fit its space. One to three characters.
 ellipsis = "…"
@@ -55,10 +56,18 @@ page_number = "Seite {page} von {pages}"
 # type, so keep it short.
 record_id = "[{id}]"
 
+# The names of the saved PDFs, before .pdf. {name} is the root person's name.
+file_name = "Ahnentafel {name}"
+fan_file_name = "Fächerahnentafel {name}"
+blank_file_name = "Leere Ahnentafel"
+
 [months]
 # January first. Duden abbreviations (Febr., Sept.): März, Mai, Juni and Juli are
 # written out; the rest take a period.
 short = ["Jan.", "Febr.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez."]
+
+[days]
+# Every day prints as its number, with the period of date_format: "1. März 1903".
 
 [index]
 # Title of the name index pages.
@@ -66,7 +75,10 @@ title = "Namensregister"
 
 # One line under the title of the first index page: how to read the numbers after each
 # name (chart-box: 6-1 is box 1 on chart 6). An empty string leaves it off.
-legend = "Die Zahlen nach jedem Namen bedeuten Tafel-Nr.: 6-1 ist Nr. 1 auf Tafel 6."
+legend = "Die Zahlen hinter jedem Namen nennen Tafel und Nummer: 6/1 ist Nr. 1 auf Tafel 6."
+
+# Where a person is drawn: Tafel/Nummer (a hyphen could read as a range).
+reference = "{chart}/{pos}"
 
 # Birth-year piece of an index entry: * = geboren.
 born = "* {birth}"
@@ -84,9 +96,9 @@ years = "({years})"
 # 1750".
 christened = "~ {birth}"
 
-# The death-year piece when the year is a burial (begr.) or a cremation (eingeäsch.).
+# The death-year piece when the year is a burial (begr.) or a cremation (eingeäschert).
 buried = "begr. {death}"
-cremated = "eingeäsch. {death}"
+cremated = "eingeäschert {death}"
 
 [relationship]
 # Relationship note from Tree.parent_relationship, in either parents mode.
@@ -97,7 +109,7 @@ foster = "(Pflegekind)"
 
 [labels]
 # Partner paired with the initial pedigree root's marriage.
-spouse = "Partner:"
+spouse = "Ehe mit:"
 # Box labels, before each value: geboren, verheiratet, gestorben; each place line reads
 # "in …".
 birth = "geb."
@@ -108,13 +120,12 @@ death = "gest."
 death_place = "in"
 
 # Stand-ins for a missing birth or death: getauft (christening or baptism), begraben
-# (burial), eingeäschert (cremation, shortened: "eingeäsch." is the long form cut to fit
-# the box).
+# (burial), eingeäschert (cremation, written out: it fits the box).
 christening = "get."
 christening_place = "in"
 burial = "begr."
 burial_place = "in"
-cremation = "eingeäsch."
+cremation = "eingeäschert"
 cremation_place = "in"
 
 [dates]
@@ -128,15 +139,23 @@ after = "nach"
 # A FROM date with no TO, and a TO date with no FROM.
 from = "ab"
 to = "bis"
-# Between the two dates of a range: 1622–1632.
-range = "–"
+# Between the two dates of a range, spaced as Duden spaces a dash between dates of
+# several words: "1. März 2001 – 5. Apr. 2002".
+range = " – "
+
+[dates.with_day]
+# The words read the same before a day: "vor 3. März 1850".
+
+[dates.rewrite]
+# No phrase changes.
 
 [years]
-# Fan stand-ins use the box labels: getauft, begraben and eingeäschert.
+# Fan stand-ins: getauft and begraben as in the boxes, and krem. (kremiert), short
+# enough for the narrow fan cells.
 # {y} is the year with any short date word.
 christening = "get. {y}"
 burial = "begr. {y}"
-cremation = "eingeäsch. {y}"
+cremation = "krem. {y}"
 
 # Verstorben states a death without a readable year. No placeholders.
 deceased = "verstorben"
@@ -149,18 +168,28 @@ before = "vor {y}"
 after = "nach {y}"
 between = "zw. {y}"
 
+# * and † mark a birth or death year alone; a stand-in alone keeps the dash:
+# get. 1852–.
+lifespan = "{born}–{died}"
+born_only = "* {born}"
+died_only = "† {died}"
+
 [sort]
-# The index order of German name registers, DIN 5007-2 "Namensliste". The printed names
-# do not change. ä, ö and ü sort as ae, oe and ue, so Müller and Mueller sort together,
-# then Muller, then Mutz. ß sorts as ss, which the casefolding already does. Name
-# particles are skipped when a surname is sorted, so "van Gogh" files under G and "von
-# der Heide" under H; the printed name stays as written. Punctuation is dropped from the
-# sort key first (O'Brien files as obrien).
+# The index order of German name registers, DIN 5007-2 "Namensliste". ä, ö and ü sort
+# as ae, oe and ue, so Müller and Mueller sort together, then Muller, then Mutz. ß sorts
+# as ss, which the casefolding already does. Name particles are skipped when a surname
+# is sorted, so "van Gogh" files under G, "von der Heide" under H, "zur Lippe" under L,
+# "von und zu Guttenberg" under G and "ten Brink" under B. The skipped particles print
+# in small letters (Anna von der HEIDE) and, in the register, after the given name
+# (HEIDE, Anna von der). Punctuation is dropped from the sort key first (O'Brien files
+# as obrien), and a hyphen reads as a space.
 after_z = []
-ignore_particles = ["von", "zu", "vom", "zum", "van", "de", "der", "den", "dem"]
-mc_as_mac = false
+ignore_particles = ["von", "zu", "vom", "zum", "zur", "und", "van", "de", "der", "den", "dem", "ten", "ter"]
+keep_case_prefixes = ["Mc"]
 
 [sort.expand]
 "ä" = "ae"
 "ö" = "oe"
 "ü" = "ue"
+
+[sort.surname_start]

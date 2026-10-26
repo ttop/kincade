@@ -39,6 +39,7 @@ from .lang import (
     PLACEHOLDERS,
     KincadeWarning,
     SortRules,
+    day_number,
     display_name,
     fill,
     format_date,
@@ -902,6 +903,12 @@ class _Doc:
     footer: str | None = None
     home: str | None = None
 
+    @functools.cached_property
+    def rules(self) -> SortRules:
+        """The language's sort rules, which also name the surname particles that keep
+        their case."""
+        return SortRules(self.drawable_strings["sort"])
+
 
 def _frame(
     c: canvas.Canvas,
@@ -1168,7 +1175,7 @@ def _box_lines(doc: _Doc, chart: Chart, pos: int) -> list[BoxLine]:
     name = (
         drawable_strings["living_name"]
         if hide
-        else fonts.clean(display_name(p, opts.preserve_case))
+        else fonts.clean(display_name(p, opts.preserve_case, doc.rules))
     )
     lines = [BoxLine(name, "", False, note)]
     lines += [
@@ -1187,7 +1194,7 @@ def _box_lines(doc: _Doc, chart: Chart, pos: int) -> list[BoxLine]:
         spouse_name = (
             drawable_strings["living_name"]
             if opts.exclude_private and is_living(spouse_id)
-            else display_name(spouse, opts.preserve_case)
+            else display_name(spouse, opts.preserve_case, doc.rules)
             if spouse
             else ""
         )
@@ -1636,9 +1643,16 @@ def build_index(
             else ""
         )
         record = _record_id(pid, show_ids, fonts, strings)
-        places = ", ".join(f"{c}-{pos}" for c, pos in sorted(locs))
+        places = ", ".join(
+            fill(
+                index["reference"],
+                PLACEHOLDERS["index.reference"],
+                {"chart": c, "pos": pos},
+            )
+            for c, pos in sorted(locs)
+        )
         text = (
-            index_name(p, preserve_case)
+            index_name(p, preserve_case, rules)
             + (" " + record if record else "")
             + years
             + ", "
@@ -1871,7 +1885,7 @@ def footer_text(
         strings["date_format"],
         PLACEHOLDERS["date_format"],
         {
-            "day": str(today.day),
+            "day": day_number(today.day, strings),
             "month": strings["months"]["short"][today.month - 1],
             "year": str(today.year),
         },
@@ -2014,7 +2028,7 @@ def _draw_document(charts: list[Chart], tree: Tree, opts: Options) -> Rendered:
     root_name = (
         raw_strings["living_name"]
         if doc.is_living(root.id)
-        else display_name(root, opts.preserve_case)
+        else display_name(root, opts.preserve_case, doc.rules)
     )
     buf, c = new_canvas(geom.width, geom.height, opts.compress, fonts)
     document_title = fill(

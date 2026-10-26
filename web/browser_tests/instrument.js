@@ -2,9 +2,7 @@
 (() => {
   if (window.acceptance) return;
   const NativeWorker = Worker;
-  const initialGates = (new URL(location.href).searchParams.get('acceptanceHold') || '')
-    .split(',').filter(Boolean).map(type => [type, true]);
-  const a = window.acceptance = {sent: [], replies: [], held: [], gates: Object.fromEntries(initialGates), pdfs: [], violations: [], pageshows: []};
+  const a = window.acceptance = {sent: [], replies: [], held: [], gates: {}, pdfs: [], violations: []};
   const createObjectURL = URL.createObjectURL.bind(URL);
   URL.createObjectURL = blob => {
     const url = createObjectURL(blob);
@@ -12,16 +10,7 @@
     return url;
   };
   document.addEventListener('securitypolicyviolation', e => a.violations.push(e.violatedDirective));
-  addEventListener('pageshow', e => a.pageshows.push(e.persisted));
   a.hold = type => { a.gates[type] = true; };
-  a.releaseOne = (type, seq = null) => {
-    const index = a.held.findIndex(x => x.event.data.type === type &&
-      (seq === null || x.event.data.seq === seq));
-    if (index < 0) throw Error(`No held ${type} reply for sequence ${seq}`);
-    const [item] = a.held.splice(index, 1);
-    // Keep the gate closed: later replies still wait until explicitly released.
-    item.deliver();
-  };
   a.release = type => {
     a.gates[type] = false;
     const held = a.held.filter(x => x.event.data.type === type);

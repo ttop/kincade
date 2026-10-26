@@ -1,0 +1,132 @@
+# Kincade web page language file: French.
+#
+# This file holds the browser page's own wording, with the same keys as
+# web/lang/en.toml (see that file for what each table and key words). It
+# addresses the reader as formal ("vous").
+
+[page]
+title = "Kincade — Arbres généalogiques"
+tagline = "Créez en PDF un arbre d’ascendance ou un arbre en éventail à partir d’un fichier GEDCOM"
+version = "Version {version}"
+language = "Langue de la page"
+languageName = "Français"
+privacy = "Votre fichier GEDCOM est lu dans ce navigateur et n’est jamais envoyé."
+
+[status]
+loading = "Chargement de Kincade…"
+ready = "Prêt"
+retry = "Réessayer"
+
+[step]
+pyodide = "Chargement de Pyodide"
+micropip = "Chargement de micropip"
+reportlab = "Installation de reportlab"
+kincade = "Installation de Kincade"
+fonts = "Chargement des polices"
+start = "Démarrage de Kincade"
+
+[host]
+site = "ce site"
+browser = "navigateur"
+
+[init]
+failed = "{step} impossible ({host})\u00A0: {message}"
+downloadHint = "Rechargez la page. Si le téléchargement échoue encore, signalez cette URL au responsable du site."
+
+[error]
+download = "Échec du téléchargement\u00A0: HTTP {status} pour {url}"
+wheelMismatch = "La page HTML et le paquet wheel de Kincade proviennent peut-être de versions différentes mises en cache. Rechargez la page pour télécharger des fichiers concordants."
+notReady = "Kincade n’est pas prêt. Rechargez la page et réessayez."
+noPeople = "Ce fichier GEDCOM ne contient aucune personne."
+open = "Impossible d’ouvrir l’arbre généalogique."
+search = "Impossible de rechercher dans l’arbre généalogique."
+rootMetadata = "Impossible de lire les informations de la personne de départ."
+render = "Impossible de créer le PDF."
+read = "Impossible de lire {name}\u00A0: {error}"
+details = "Détails"
+
+[tree]
+heading = "Arbre généalogique"
+sample = "Voir un exemple"
+choose = "Choisir un fichier"
+hint = "Choisissez ou déposez un fichier GEDCOM (5.5, 5.5.1 ou 7.0)"
+input = "Choisir un fichier GEDCOM"
+summary = { one = "{name}\u00A0: {count} personne", other = "{name}\u00A0: {count} personnes" }
+
+[root]
+heading = "Personne de départ"
+search = "Rechercher par nom ou identifiant"
+openList = "Ouvrir la liste des personnes"
+clear = "Effacer la personne choisie"
+matching = "Personnes correspondantes"
+choose = "Choisissez une personne de départ."
+prompt = "Choisissez une personne de départ pour voir l’arbre."
+selected = "Personne de départ\u00A0: {id}, {name}"
+searching = "Recherche en cours…"
+unavailable = "Recherche indisponible."
+matches = { one = "{count} résultat", other = "{count} résultats" }
+shown = "{shown} premiers résultats sur {total}"
+
+[family]
+label = "Mariage de la personne de départ"
+first = "Premier mariage enregistré"
+loading = "Chargement des mariages…"
+unknownSpouse = "Conjoint inconnu"
+
+[options]
+heading = "Options"
+chart = "Type d’arbre"
+pedigree = "Ascendance"
+fan = "Éventail"
+generations = "Générations"
+allGenerations = "Toutes les générations"
+custom = "Autre…"
+paper = "Format"
+portrait = "portrait"
+landscape = "paysage"
+letter = "Lettre US"
+tabloid = "Tabloïd"
+largePrint = "Gros caractères"
+ink = "Impression"
+color = "Couleur"
+grayscale = "Niveaux de gris"
+bw = "Noir et blanc"
+hideLiving = "Masquer les personnes vivantes"
+more = "Plus d’options"
+chartLanguage = "Langue de l’arbre"
+customGenerations = "Nombre de générations"
+all = "toutes"
+generationsHelp = "Laissez le champ vide pour toutes les générations."
+generationsError = "Saisissez un nombre entier supérieur ou égal à 1, ou laissez le champ vide pour toutes les générations."
+generationsInvalid = "Saisissez un nombre entier supérieur ou égal à 1, ou laissez le champ vide."
+emptyBoxes = "Omettre les ancêtres inconnus"
+uppercase = "Nom de famille en MAJUSCULES"
+showIds = "Afficher les identifiants"
+adoptive = "Afficher les parents adoptifs et d’accueil"
+standins = "Utiliser baptêmes et inhumations à défaut de naissances et de décès"
+shortenPlaces = "Abréger les noms de lieux trop longs"
+shadow = "Ombre portée"
+title = "Titre"
+rootName = "Nom de la personne de départ"
+footer = "Pied de page"
+noFooter = "Sans pied de page"
+pageNumbers = "Numéros de page"
+index = "Index des noms"
+
+[pdf]
+heading = "PDF"
+download = "Télécharger le PDF"
+open = "Ouvrir le PDF"
+preview = "Aperçu du PDF"
+rendering = "Création du PDF…"
+builtinFonts = "Polices PDF standard utilisées"
+bytes = { one = "{size}\u00A0octet", other = "{size}\u00A0octets" }
+kb = "{size}\u00A0Ko"
+mb = "{size}\u00A0Mo"
+pedigree = "{charts}, {indexPages}, {pages}"
+charts = { one = "{count} tableau", other = "{count} tableaux" }
+indexPages = { one = "{count} page d’index", other = "{count} pages d’index" }
+pages = { one = "{count} page", other = "{count} pages" }
+fan = "arbre en éventail, {generations}, {people}"
+generations = { one = "{count} génération", other = "{count} générations" }
+people = { one = "{count} personne", other = "{count} personnes" }

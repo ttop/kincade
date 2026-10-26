@@ -30,10 +30,14 @@ from .fanpdf import FAN_PAPER, INKS, FanOptions, render_fan
 from .fanplan import plan_fan
 from .gedcom import read_gedcom
 from .lang import (
+    DEFAULT_STRINGS,
+    PLACEHOLDERS,
     KincadeWarning,
     LangError,
+    SortRules,
     display_name,
     expand_home,
+    fill,
     format_date,
     load_strings,
     year_of,
@@ -65,20 +69,35 @@ def find_people(tree: Tree, text: str) -> list[Person]:
     return [p for p in tree.people.values() if needle in _fold(display_name(p))]
 
 
-BLANK_OUTPUT_NAME = "Blank cascading pedigree.pdf"  # the default output of --blank
+def default_output_name(
+    root_name: str, strings: Mapping[str, Any] = DEFAULT_STRINGS
+) -> str:
+    """The language's file_name with the root name, made file-system safe, and .pdf:
+    'Jane DOE cascading pedigree.pdf' in English."""
+    return _file_name(strings["file_name"], root_name)
 
 
-def default_output_name(root_name: str) -> str:
-    """'<root name> cascading pedigree.pdf' with the name made file-system safe and at
-    most 100 characters.
-    """
-    return f"{_output_stem(root_name) or 'pedigree'} cascading pedigree.pdf"
+def default_fan_output_name(
+    root_name: str, strings: Mapping[str, Any] = DEFAULT_STRINGS
+) -> str:
+    """The language's fan_file_name with the root name, made file-system safe, and
+    .pdf: 'Jane DOE fan chart.pdf' in English."""
+    return _file_name(strings["fan_file_name"], root_name)
 
 
-def default_fan_output_name(root_name: str) -> str:
-    """The file-system-safe fan file name, or fan chart.pdf for an empty name."""
-    stem = _output_stem(root_name)
-    return f"{stem} fan chart.pdf" if stem else "fan chart.pdf"
+def blank_output_name(strings: Mapping[str, Any] = DEFAULT_STRINGS) -> str:
+    """The default output of --blank: the language's blank_file_name, made file-system
+    safe, and .pdf."""
+    return _file_name(strings["blank_file_name"], "")
+
+
+def _file_name(template: str, root_name: str) -> str:
+    """A file-name template filled with the root name as _output_stem makes it, then
+    made file-system safe, and .pdf. An empty name leaves the template's words
+    ('cascading pedigree.pdf'); with no words either, 'Kincade.pdf'."""
+    allowed = PLACEHOLDERS["file_name"]
+    text = fill(template, allowed, {"name": _output_stem(root_name)})
+    return f"{_safe_text(squash(text)) or 'Kincade'}.pdf"
 
 
 def output_root_name(
@@ -102,11 +121,17 @@ def output_root_name(
 
 def _output_stem(root_name: str) -> str:
     """A safe name, at most 100 characters and 200 UTF-8 bytes."""
-    stem = re.sub(r"[\x00-\x1f\x7f]", "", root_name)
-    stem = re.sub(r'[\\/:*?"<>|]', "_", stem).strip(". ")[:100].rstrip(". ")
+    stem = _safe_text(root_name)[:100].rstrip(". ")
     while len(stem.encode("utf-8")) > 200:  # most file systems limit names to 255 bytes
         stem = stem[:-1]
     return stem
+
+
+def _safe_text(text: str) -> str:
+    """Text a file name can hold: control characters dropped, each of \\/:*?"<>| as _,
+    and no dot or space at either end."""
+    text = re.sub(r"[\x00-\x1f\x7f]", "", text)
+    return re.sub(r'[\\/:*?"<>|]', "_", text).strip(". ")
 
 
 class ConfigError(Exception):
@@ -314,7 +339,7 @@ def _parser(suppress_defaults: bool = False) -> argparse.ArgumentParser:
         "-o",
         "--output",
         metavar="FILE",
-        help='PDF to write (default: "<root name> cascading pedigree.pdf"; with --fan: "<root name> fan chart.pdf"; with --blank: "Blank cascading pedigree.pdf")',
+        help='PDF to write (default: named in the chart language, in English "<root name> cascading pedigree.pdf"; with --fan: "<root name> fan chart.pdf"; with --blank: "Blank cascading pedigree.pdf")',
     )
     add(
         page,
@@ -695,9 +720,14 @@ def pedigree_summary(rendered: Rendered) -> str:
     )
 
 
+def fan_people(fan: Fan) -> int:
+    """The distinct people in a fan chart: a person seated n times counts 1/n a seat."""
+    return round(sum(1 / cell.copies for cell in fan.cells if not cell.empty))
+
+
 def fan_summary(fan: Fan) -> str:
     """The generations and distinct people in a fan chart."""
-    people = round(sum(1 / cell.copies for cell in fan.cells if not cell.empty))
+    people = fan_people(fan)
     return (
         f"fan chart, {_count(fan.generations, 'generation')}, "
         f"{people} {'person' if people == 1 else 'people'}"
@@ -767,12 +797,14 @@ def person_line(
     *,
     living_name: str | None = "Living",
     preserve_case: bool = False,
+    rules: SortRules | None = None,
 ) -> str:
     """Record ID, name and years of a person, tab-separated. Living people's names
     use the localized placeholder and their years are omitted. IDs remain for root
     selection. living_name=None keeps names visible in the browser's local picker. With
     `standins`, a christening, burial or cremation gives a missing birth or death year,
-    as in the boxes (birth_source, death_source)."""
+    as in the boxes (birth_source, death_source). `rules` are the language's surname
+    settings (display_name)."""
     born, died = (
         year_of(birth_source(p, standins)[0].date),
         year_of(death_source(p, standins)[0].date),
@@ -782,7 +814,7 @@ def person_line(
     name = (
         living_name
         if hide and living_name is not None
-        else display_name(p, preserve_case)
+        else display_name(p, preserve_case, rules)
     )
     return f"{p.id}\t{name}\t{years}"
 
@@ -793,6 +825,7 @@ def _family_lines(
     living: Callable[[str | None], bool],
     strings: Mapping[str, Any],
     preserve_case: bool,
+    rules: SortRules,
 ) -> list[str]:
     """Indented spouse-family rows for --find, in FAMS then file order. Only actual
     partners are listed; a missing first FAMS never promotes a later default.
@@ -809,7 +842,7 @@ def _family_lines(
         name = (
             strings["living_name"]
             if living(spouse_id)
-            else display_name(spouse, preserve_case)
+            else display_name(spouse, preserve_case, rules)
             if spouse
             else ""
         )
@@ -838,7 +871,7 @@ def _make_blank(args: argparse.Namespace) -> int:
         return _fail(e)
     pdf = render_blank(_options(args, strings))
     return _write_pdf(
-        Path(args.output or BLANK_OUTPUT_NAME), pdf, "1 blank chart, 1 page"
+        Path(args.output or blank_output_name(strings)), pdf, "1 blank chart, 1 page"
     )
 
 
@@ -875,6 +908,7 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
         found = find_people(tree, find)
         if not found:
             return _fail(f"no person matches {find!r}")
+        rules = SortRules(strings["sort"])
         for p in found:
             print(
                 person_line(
@@ -883,9 +917,12 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
                     standins,
                     living_name=strings["living_name"],
                     preserve_case=args.preserve_case,
+                    rules=rules,
                 )
             )
-            for line in _family_lines(tree, p, living, strings, args.preserve_case):
+            for line in _family_lines(
+                tree, p, living, strings, args.preserve_case, rules
+            ):
                 print(line)
         return 0
 
@@ -897,6 +934,7 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
         return _fail(f"no person matches {args.root!r}")
     if len(matches) > 1:
         _fail(f"{len(matches)} people match {args.root!r}; use a record ID:")
+        rules = SortRules(strings["sort"])
         for p in matches[:_CANDIDATES_SHOWN]:
             line = person_line(
                 p,
@@ -904,6 +942,7 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
                 standins,
                 living_name=strings["living_name"],
                 preserve_case=args.preserve_case,
+                rules=rules,
             )
             print(f"  {line}", file=sys.stderr)
         if len(matches) > _CANDIDATES_SHOWN:
@@ -941,7 +980,8 @@ def _make_pedigree(args: argparse.Namespace, find: str | None) -> int:
                 adoptive_parents=args.adoptive_parents,
                 large_print=args.large_print,
                 living_name=strings["living_name"],
-            )
+            ),
+            strings,
         )
     )
     summary = pedigree_summary(rendered)
@@ -984,7 +1024,8 @@ def _make_fan(
                     exclude_private=args.exclude_private,
                     adoptive_parents=args.adoptive_parents,
                     living_name=strings["living_name"],
-                )
+                ),
+                strings,
             )
         ),
         pdf,

@@ -11,15 +11,23 @@ from kincade.charts import box_generation, living_checker, nobody_living, plan_c
 from kincade.cli import (
     default_fan_output_name,
     default_output_name,
-    fan_summary,
+    fan_people,
     find_people,
     output_root_name,
-    pedigree_summary,
     person_line,
 )
 from kincade.fanpdf import FAN_PAPER
-from kincade.lang import DEFAULT_STRINGS, display_name, format_date
+from kincade.lang import (
+    SortRules,
+    display_name,
+    format_date,
+    languages,
+    load_strings,
+)
 from kincade.pdf import BASE14, PAPER_SIZES, load_fontset, render_with_counts
+
+# The bundled languages, by their ISO 639-1 codes: the page's languages and the PDFs'.
+LANGUAGES = languages()
 
 PAGE_OPTIONS: dict[str, frozenset[str]] = {
     "pedigree": frozenset(
@@ -40,6 +48,7 @@ PAGE_OPTIONS: dict[str, frozenset[str]] = {
             "preserve_case",
             "shadow",
             "root_family",
+            "lang",
         }
     ),
     "fan": frozenset(
@@ -53,9 +62,25 @@ PAGE_OPTIONS: dict[str, frozenset[str]] = {
             "paper",
             "title",
             "footer",
+            "lang",
         }
     ),
 }
+
+
+class PageError(ValueError):
+    """A ValueError the page words in its own language: `code` names its message."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def check_language(lang: object) -> str:
+    """A bundled language code, else a ValueError."""
+    if lang not in LANGUAGES:
+        raise ValueError(f"Unknown language {lang!r}")
+    return lang
 
 
 class Session:
@@ -77,7 +102,7 @@ class Session:
         """Replace the tree only after reading a file containing people."""
         tree = read_gedcom(data)
         if not tree.people:
-            raise ValueError("GEDCOM file has no people")
+            raise PageError("noPeople", "GEDCOM file has no people")
         self.tree = tree
         self._pedigree_depths.clear()
         return len(tree.people)
@@ -109,15 +134,22 @@ class Session:
         return self._pedigree_depths[key]
 
     def root_families(
-        self, root_id: str, exclude_private: bool = False, preserve_case: bool = False
-    ) -> list[dict[str, str]]:
-        """Root-partner families, with privacy-safe spouse and marriage labels."""
+        self,
+        root_id: str,
+        exclude_private: bool = False,
+        preserve_case: bool = False,
+        lang: str = "en",
+    ) -> list[dict[str, str | list[str]]]:
+        """Root-partner families: each family's ID, its privacy-safe spouse name ("" for
+        none) and marriage details, worded in `lang` as the chart's boxes are."""
         tree = self.tree
         if tree is None:
             raise ValueError("Open a GEDCOM file first")
         root = tree.people.get(root_id)
         if root is None:
             raise ValueError(f"Unknown root record ID {root_id!r}")
+        strings = load_strings(check_language(lang))
+        rules = SortRules(strings["sort"])
         living = (
             living_checker(tree, [], datetime.date.today().year)
             if exclude_private
@@ -133,21 +165,21 @@ class Session:
             spouse_id = family.mother if family.father == root_id else family.father
             spouse = tree.people.get(spouse_id)
             name = (
-                DEFAULT_STRINGS["living_name"]
+                strings["living_name"]
                 if living(spouse_id)
-                else display_name(spouse, preserve_case)
+                else display_name(spouse, preserve_case, rules)
                 if spouse
                 else ""
             )
-            parts = [family_id, name or "Unknown spouse"]
+            details = []
             if family.marriage and not (living(root_id) or living(spouse_id)):
                 for key, value in (
-                    ("marriage", format_date(family.marriage.date)),
+                    ("marriage", format_date(family.marriage.date, strings)),
                     ("marriage_place", family.marriage.place),
                 ):
                     if value:
-                        parts.append(f"{DEFAULT_STRINGS['labels'][key]} {value}")
-            choices.append({"id": family_id, "label": " · ".join(parts)})
+                        details.append(f"{strings['labels'][key]} {value}")
+            choices.append({"id": family_id, "spouse": name, "details": details})
         return choices
 
     def search(
@@ -171,8 +203,10 @@ class Session:
 
     def render(
         self, root_id: str, chart: str, settings: dict[str, object]
-    ) -> tuple[bytes, str, str]:
-        """Render one chart with supplied page settings and library defaults."""
+    ) -> tuple[bytes, str, dict[str, int]]:
+        """Render one chart with supplied page settings and library defaults. Returns
+        the PDF, its file name and the counts the page words as its summary: charts,
+        index pages and pages for a pedigree; generations and people for a fan."""
         tree = self.tree
         if tree is None:
             raise ValueError("Open a GEDCOM file first")
@@ -194,6 +228,8 @@ class Session:
                     )
             elif type(generations) is not int or not 2 <= generations <= 7:
                 raise ValueError("Fan generations must be an integer from 2 to 7")
+        strings = load_strings(check_language(settings.get("lang", "en")))
+        living_name = strings["living_name"]
 
         # The worker sends JSON values. Each chart accepts heterogeneous keyword
         # types; generations and the allowed names are checked above.
@@ -210,9 +246,15 @@ class Session:
                         exclude_private=options.exclude_private,
                         adoptive_parents=options.adoptive_parents,
                         large_print=options.large_print,
-                    )
+                        living_name=living_name,
+                    ),
+                    strings,
                 ),
-                pedigree_summary(rendered),
+                {
+                    "charts": rendered.chart_pages,
+                    "indexPages": rendered.index_pages,
+                    "pages": rendered.pages,
+                },
             )
             width, height = PAPER_SIZES[options.paper]
             self.preview = {"pages": rendered.pages, "width": width, "height": height}
@@ -228,12 +270,13 @@ class Session:
                 "adoptive_parents",
                 "event_standins",
                 "preserve_case",
+                "lang",
             }
         }
         drawing = {
             key: value
             for key, value in supplied.items()
-            if key in {"paper", "title", "footer"}
+            if key in {"paper", "title", "footer", "lang"}
         }
         ink = supplied.get("ink", "color")
         fan = plan_fan(tree, root_id, **planning, ink=ink)
@@ -245,9 +288,15 @@ class Session:
                 root_id,
                 exclude_private=supplied.get("exclude_private", False),
                 adoptive_parents=supplied.get("adoptive_parents", False),
-            )
+                living_name=living_name,
+            ),
+            strings,
         )
-        result = pdf, filename, fan_summary(fan)
+        result = (
+            pdf,
+            filename,
+            {"generations": fan.generations, "people": fan_people(fan)},
+        )
         width, height = FAN_PAPER[fan_options.paper]
         self.preview = {"pages": 1, "width": width, "height": height}
         return result

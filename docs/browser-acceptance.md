@@ -13,99 +13,48 @@ Use `KINCADE_BROWSER_CHANNEL=chrome` for installed external Chrome,
 `KINCADE_BROWSER_HEADED=1` for visible test windows. The browser always uses its
 own temporary profile; no current user session or internal app browser is used.
 
-The suite checks these behaviors with synthetic GEDCOM trees:
+The suite runs five journeys end to end against the real built site:
 
-- Ready/bootstrap, early file choices, sample I1 selection, uploads and drops;
-  sample intent stays attached to its source file, including failed replacements.
-  The visible example action tracks successful source provenance through failed
-  replacements and explicit root clear; real uploads restore it even with the
-  sample filename. A compact keyboard/click file picker and dropped files show
-  the current filename and people count without contradictory native chooser text.
-  The Root person panel prompts for an explicit root after upload or clear; selection
-  and pending/current PDF rendering hide that prompt.
-- Full and filtered search, the 200-result limit, and unique matches that stay
-  unselected until click or Enter, including one-person uploads and drops.
-  Typing preserves any prior root and PDF; Enter flushes a pending search and
-  selects its current first result; Enter during an in-flight search awaits that
-  reply. Input-focused Arrow Up/Down navigation, active-row scrolling, duplicate
-  names/record IDs/years, selected-name display and editing, unchanged closed Enter
-  retaining the selection, reopening/direct arrows searching the committed name
-  (including duplicate names after an ID search), IME Enter protection,
-  and pointer commitment follow the manual-selection combobox pattern. Tab skips
-  result options; selection/Escape/Tab/outside focus or pointer closes the popup
-  without implicit commitment, and late replies keep it closed. Dismissing a
-  draft or deleted query restores the committed name and searches that name on
-  reopen. Pending queries clear old actionable suggestions and active references.
-  The trailing keyboard-accessible x clears selection, preview, download and
-  summary; the rootless chevron opens the list without selecting. There is no
-  separate visible Root line or duplicate native cancel button. Clear cancels
-  pending manual selection and current/queued sample reselection, while a fresh
-  example action after choosing a real file still selects I1; delayed render
-  replies cannot resurrect the cleared PDF, and the next explicit choice renders normally.
-  Opening the rootless list preserves a pending sample selection.
-- The pedigree-only Root marriage selector appears below the root-person picker
-  only when the selected person has more than one partner family. It pairs one
-  spouse with that union's date and place, defaults to the first recorded FAMS,
-  and distinguishes families by record ID. It retains a choice across privacy,
-  surname case, print, parent and Fan switches, while Fan requests omit the
-  override. New roots, explicit clear and successful files reset the choice;
-  failed replacements preserve it.
-  Privacy hides living spouse names and hides marriage details when either
-  partner may be living. Held metadata across settings, roots, clears and
-  repeated record IDs in new files cannot restore old choices or private labels.
-- Every chart's defaults and live settings, paper/print/ink combinations, privacy,
-  adoptive parents and event stand-ins with relevant fixture data, blank outlines,
-  IDs, places, shadows, index/page numbers, titles and footer override/retention.
-- Per-chart generations/paper/title, shared settings, collapsed disclosure values,
-  and the 400ms text debounce. Pedigree All and page-boundary presets in both print
-  sizes exercise real 11- and 17-generation ancestry chains, checking useful
-  caps, extension beyond five levels, actual PDF cutoffs, page counts and geometry.
-  Root/parent/print changes preserve valid ordinals or clamp before the first
-  affected snapshot. Deep birth and shallow adoptive families, root-only trees
-  and print-dependent cyclic plans exercise the selected context. Large print
-  preserves preset ordinal,
-  Custom preserves literal values and invalid drafts, and Custom opens/focuses
-  its More options field. Reveal/disclosure do not send duplicate renders;
-  preset/All choices unblock stale invalid custom drafts. Held real replies check
-  remapped latest snapshots and existing Fan/invalid-Pedigree ordering.
-  Held root metadata across clears, root/mode changes, repeated IDs in new
-  datasets and failed replacement opens cannot restore stale caps or PDFs.
-  Metadata and render barriers resolve to one latest due preset snapshot;
-  All, Custom and Fan remain usable while metadata is pending. Search rows do
-  not trigger ancestry planning.
-- Real PDF page counts, readable downloads and filenames that keep recorded name
-  spelling independently of Last name UPPERCASE; chart surnames are uppercase
-  by default and keep recorded case when Last name UPPERCASE is unchecked,
-  embedded font subsets, outline paths and page geometry. Five-generation Fan
-  downloads keep names and dates in both terminal third-ring cells curved and
-  clockwise like their neighbors, with outward glyph tops and names outside dates.
-- Compact desktop sidebar with chart above the fold, 320px gutters/no overflow,
-  dark/light themes, input-attached dropdown geometry without shifting the root
-  card/options/chart, 48rem preview fallback and initial one-paper-page sizing;
-  resizing within desktop widths keeps the PDF URL. Actual native page geometry
-  checks the full first paper page fits with modest trailing spacing and no part
-  of page two visible, across paper sizes and document page counts.
-- Separate stale search/render replies, checking unchanged rows after only the
-  stale search reply arrives; one render in flight and exact request snapshots.
-  Multiple queued opens keep the barrier until the final reply, and the final
-  upload owns root selection even when named `pedigree.ged`; failed final opens
-  recover the preserved sample with one search. Successful/failed replacements
-  retain their source intent;
-  invalid pedigree → Fan → invalid pedigree accepts the current fan reply.
-- Actual native PDF viewer toolbar/page navigation/zoom, actual persisted Back
-  navigation in the Open PDF layout with a usable PDF Blob, wide Back usability
-  through restoration or reload, and clean reload.
-- One unavailable font and a bad font hash use all-or-nothing base-14 fallback;
-  a mismatched wheel fails at this site, Retry reloads, and a clean site recovers.
-- First visits in fresh browser contexts at the site root and mounted directories,
-  including no trailing slash, a trailing slash, explicit `index.html`, and page
-  query strings/fragments. The test host rewrites these URLs without redirecting
-  and returns 403 for missing objects. Each case checks the wheel's directory,
-  hash query parameter and SHA-256, then downloads both sample charts. A missing
-  wheel reports its URL and HTTP status with a recovery hint, without overflowing
-  a narrow screen.
-- A real CSP response header, and plain HTTP on a mapped non-loopback hostname
-  with `isSecureContext === false`, using initialization, both charts and downloads.
+- **The sample under the CSP header.** Before a tree is open, search is disabled
+  and More options stays closed. The bundled sample renders as a six-page
+  pedigree with the expected metadata title, embedded fonts and download name,
+  and the live preview iframe tracks that PDF. Typing a surname narrows the
+  typeahead and Escape restores the committed root. The Fan chart renders its
+  own summary, page geometry and download name. Selecting a root with more
+  than one marriage lists each option by spouse; choosing one redraws the
+  pedigree with that spouse, and a Fan request from the same root omits the
+  marriage override. The whole journey runs with the page's CSP response
+  header in place.
+- **Your own file and its options.** An uploaded GEDCOM file is searched and a
+  root is chosen by keyboard, and the first render matches the full default
+  settings. Every More options control — Last name UPPERCASE, record IDs, empty
+  boxes, title, footer and no-footer — changes the exact settings sent to the
+  worker; UPPERCASE, record IDs, title and footer are also checked directly in
+  the drawn PDF text. Exclude private conceals the chosen name and
+  birth date in the PDF text and metadata, renames the download, and keeps the
+  local search choice without exposing a birth year. Overlapping option changes
+  made while a render is in flight never send a second request; releasing the
+  held reply sends exactly one more render, for the latest settings.
+- **A fresh install in a mounted folder over plain HTTP.** A static host that
+  rewrites a mounted, slash-free directory URL without redirecting the browser
+  still serves the page, which installs over plain HTTP (`isSecureContext`
+  false) without the browser ever leaving the opened URL. The wheel request
+  carries the expected mounted path and cache-busting hash query, and its
+  SHA-256 matches the manifest. Both chart types render and download.
+- **Integrity failures.** A font whose published hash does not match falls back
+  to built-in fonts for the sample chart and still downloads. A wheel whose
+  bytes do not match its recorded hash fails installation with a retry
+  affordance that reloads and fails again against the same corrupt site. A
+  wheel request answered with an HTTP error names the status, the URL and the
+  site owner. A later clean start recovers fully, with every font embedded
+  again.
+- **The page in French, then other languages.** Both language pickers list the
+  five bundled languages by name and code. Opening the page with `?lang=fr`
+  words the page, its placeholders and the rendered sample and Fan chart in
+  French. Switching the page language rewords the page and resends the chart
+  in the new language, keeping the choice in the address. Choosing a chart
+  language apart from the page keeps that chart language when the page is
+  reworded again, and sends no new render for a page-only change.
 
 With See an example, root `I1` (George WASHINGTON) and unchanged defaults, acceptance
 checks these outputs with no built-in-font note:
@@ -115,19 +64,14 @@ checks these outputs with no built-in-font note:
 | Pedigree | `5 charts, 1 index page, 6 pages` | Six portrait Letter pages, four embedded font subsets | `George Washington cascading pedigree.pdf` |
 | Fan | `fan chart, 6 generations, 30 people` | One landscape Letter page, two embedded font subsets | `George Washington fan chart.pdf` |
 
-The init script installs requested gates before page code starts. The harness
-releases individual replies by sequence while keeping newer replies held, without
-changing their data or replacing Python computation. The full browser, pinned
-runtime and fonts must be reachable; capability or network failures fail with
-diagnostics rather than silently skipping. Native tests remain separate:
-`uv run pytest -q`.
+The harness can hold a reply of a kind back and release every held reply of
+that kind at once, without changing its data or replacing Python computation.
+The full browser, pinned runtime and fonts must
+be reachable; capability or network failures fail with diagnostics rather than
+silently skipping. Native tests remain separate: `uv run pytest -q`.
 
-The HTTP test proves operation outside a secure context. It does not claim a
-second physical device, network routing or Safari/Firefox coverage. The CSP is
-an exercised policy, not an assertion of minimum directives for all engines.
-See [web/README.md](../web/README.md#content-security-policy) for the exact policy.
-
-The Open PDF layout test requires a persisted Back navigation event and checks
-that the retained PDF Blob remains usable. The wide-layout test accepts either
-restoration or a reload and checks that the returned page can provide a usable
-PDF. It does not require wide-layout back-forward cache restoration.
+The plain-HTTP journey proves operation outside a secure context. It does not
+claim a second physical device, network routing or Safari/Firefox coverage.
+The CSP is an exercised policy, not an assertion of minimum directives for all
+engines. See [web/README.md](../web/README.md#content-security-policy) for the
+exact policy.

@@ -43,6 +43,122 @@
   let pendingMetadata = null;
   let rootMetadata = null;
   let rootFamily = "";
+  let manifest;
+  // The page's language, one of the bundled languages (ISO 639-1 codes); every text the
+  // page writes comes from manifest.messages in this language.
+  let languages = ["en"];
+  let pageLang = "en";
+  // Text the page wrote itself, rewritten when the language changes.
+  const dynamicText = new Map();
+
+  function fill(template, values) {
+    return template.replace(/\{\{|\}\}|\{(\w+)\}/g, (token, name) =>
+      name === undefined ? token[0] : String(values[name] ?? token));
+  }
+
+  // The message `key` in the page's language. A message with plural forms picks one by
+  // params.count; numbers are written the language's way.
+  function t(key, params = {}) {
+    let text = manifest?.messages?.[pageLang]?.[key] ?? manifest?.messages?.en?.[key] ?? key;
+    if (typeof text === "object") {
+      text = text[new Intl.PluralRules(pageLang).select(params.count)] ?? text.other;
+    }
+    const numbers = new Intl.NumberFormat(pageLang);
+    return fill(text, Object.fromEntries(Object.entries(params).map(([name, value]) =>
+      [name, typeof value === "number" ? numbers.format(value) : value])));
+  }
+
+  // Set an element's text from `render`, again whenever the language changes; null
+  // empties it.
+  function show(element, render) {
+    element.removeAttribute("data-i18n");
+    if (render) {
+      dynamicText.set(element, render);
+      element.textContent = render();
+    } else {
+      dynamicText.delete(element);
+      element.textContent = "";
+    }
+  }
+
+  // ?lang=, else the first of the browser's languages that the page has, else English.
+  // Both language selects list the page's languages, each by its own name.
+  function fillLanguageChoices() {
+    const name = (code) => manifest.messages[code]["page.languageName"];
+    languages = Object.keys(manifest.messages).sort((a, b) => name(a).localeCompare(name(b)));
+    for (const select of [byId("page-lang"), byId("chart-lang")]) {
+      select.replaceChildren(...languages.map((code) => {
+        const option = new Option(name(code), code, code === "en", code === "en");
+        option.lang = code;
+        return option;
+      }));
+    }
+  }
+
+  function preferredLanguage() {
+    // A language may be a whole tag (pt-BR) or a primary subtag (fr), in any case; a
+    // browser's whole tag wins, then its primary subtag.
+    const known = new Map(languages.map((code) => [code.toLowerCase(), code]));
+    const asked = known.get(String(new URLSearchParams(location.search).get("lang")).toLowerCase());
+    if (asked) return asked;
+    for (const tag of navigator.languages?.length ? navigator.languages : [navigator.language]) {
+      const code = String(tag).toLowerCase();
+      const match = known.get(code) ?? known.get(code.split("-")[0]);
+      if (match) return match;
+    }
+    return "en";
+  }
+
+  function updateChartPlaceholders() {
+    const strings = manifest?.languages?.[byId("chart-lang").value];
+    if (!strings) return;
+    const name = t("options.rootName");
+    byId("pedigree-title").placeholder = fill(strings.metaTitle, {title: strings.title, name});
+    byId("fan-title").placeholder = fill(strings.fanTitle, {name});
+    const today = new Date();
+    const date = fill(strings.dateFormat, {
+      day: strings.days[today.getDate() - 1],
+      month: strings.months[today.getMonth()], year: String(today.getFullYear()),
+    });
+    byId("footer").placeholder = fill(strings.footer, {date});
+  }
+
+  function applyLanguage(lang) {
+    const previous = pageLang;
+    pageLang = lang;
+    document.documentElement.lang = lang;
+    document.title = t("page.title");
+    byId("page-lang").value = lang;
+    for (const element of document.querySelectorAll("[data-i18n]")) {
+      element.textContent = t(element.dataset.i18n);
+    }
+    for (const attribute of ["aria-label", "placeholder", "title"]) {
+      for (const element of document.querySelectorAll(`[data-i18n-${attribute}]`)) {
+        element.setAttribute(attribute, t(element.getAttribute(`data-i18n-${attribute}`)));
+      }
+    }
+    for (const [element, render] of dynamicText) {
+      if (element.isConnected) element.textContent = render();
+      else dynamicText.delete(element);
+    }
+    updateRootAction();
+    updateGenerationChoices();
+    updateChartPlaceholders();
+    validSettings();
+    // Marriage choices are worded by Kincade in the page's language.
+    if (rootMetadata || pendingMetadata) {
+      invalidateRootMetadata();
+      ensureRootMetadata();
+    } else {
+      updateRootFamilyChoices();
+    }
+    // The chart language follows the page's until the reader chooses another.
+    const chartLang = byId("chart-lang");
+    if (lang !== previous && chartLang.value === previous) {
+      chartLang.value = lang;
+      optionChanged(chartLang);
+    }
+  }
 
   function pedigreeGenerations() {
     if (pedigreeGenerationMode === "custom") {
@@ -60,6 +176,7 @@
       largePrint: byId("large-print").checked,
       excludePrivate: byId("exclude-private").checked,
       preserveCase: !byId("preserve-case").checked,
+      lang: pageLang,
     };
   }
 
@@ -80,12 +197,12 @@
       }
     }
     const choice = byId("pedigree-generation-choice");
-    const options = [new Option("All generations", "all"), ...pedigreePresets.map((value, index) => {
+    const options = [new Option(t("options.allGenerations"), "all"), ...pedigreePresets.map((value, index) => {
       const option = new Option(String(value), String(index));
       // Keep a pending preset's intent selected, but do not offer stale depths.
       option.disabled = !current;
       return option;
-    }), new Option("Custom…", "custom")];
+    }), new Option(t("options.custom"), "custom")];
     choice.replaceChildren(...options);
     choice.value = pedigreeGenerationMode;
   }
@@ -99,8 +216,11 @@
     const current = matchesMetadataContext(rootMetadata);
     const choice = byId("root-family");
     const families = current ? rootMetadata.families : [];
-    const options = [new Option(root && !current ? "Loading marriages…" : "First recorded marriage", ""),
-      ...families.map((family) => new Option(family.label, family.id))];
+    const options = [new Option(t(root && !current ? "family.loading" : "family.first"), ""),
+      ...families.map((family) => new Option(
+        [family.id, family.spouse || t("family.unknownSpouse"), ...family.details].join(" · "),
+        family.id,
+      ))];
     choice.replaceChildren(...options);
     if (current && rootFamily && !families.some((family) => family.id === rootFamily)) rootFamily = "";
     choice.value = current ? rootFamily : "";
@@ -152,7 +272,7 @@
       const number = generations.valueAsNumber;
       const valid = pedigreeGenerationMode !== "custom" || empty || (!generations.validity.badInput &&
         Number.isFinite(number) && Number.isInteger(number) && number >= 1);
-      generations.setCustomValidity(valid ? "" : "Enter a whole number of at least 1, or leave empty.");
+      generations.setCustomValidity(valid ? "" : t("options.generationsInvalid"));
       generations.setAttribute("aria-invalid", String(!valid));
       byId("generations-error").hidden = valid;
     }
@@ -187,15 +307,26 @@
     byId("footer").disabled = byId("no-footer").checked;
   }
 
-  function showError(target, message, details = "") {
+  // A worker error reply in the page's language: a coded error by its code, an
+  // unexpected one by the operation that failed, a plain ValueError as Kincade wrote it.
+  function errorText(reply) {
+    if (reply.code) return t(`error.${reply.code}`, reply.params);
+    if (reply.details) {
+      return t({open: "error.open", search: "error.search", "root-metadata": "error.rootMetadata",
+        render: "error.render"}[reply.request] ?? "error.render");
+    }
+    return reply.message;
+  }
+
+  function showError(target, render, details = "") {
     target.replaceChildren();
     const text = document.createElement("p");
-    text.textContent = message;
+    show(text, render);
     target.append(text);
     if (details) {
       const disclosure = document.createElement("details");
       const heading = document.createElement("summary");
-      heading.textContent = "Details";
+      show(heading, () => t("error.details"));
       const trace = document.createElement("pre");
       trace.textContent = details;
       disclosure.append(heading, trace);
@@ -255,15 +386,32 @@
     pdfUrl = null;
     pdfPreview = null;
     byId("pdf-frame").style.removeProperty("height");
-    byId("pdf-summary").textContent = "";
+    show(byId("pdf-summary"), null);
     byId("pdf-section").hidden = true;
     updatePreview();
   }
 
   function humanSize(bytes) {
-    if (bytes < 1024) return `${bytes} bytes`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    const tenths = (value) => new Intl.NumberFormat(pageLang, {
+      minimumFractionDigits: 1, maximumFractionDigits: 1,
+    }).format(value);
+    if (bytes < 1024) return t("pdf.bytes", {count: bytes, size: bytes});
+    if (bytes < 1024 * 1024) return t("pdf.kb", {size: tenths(bytes / 1024)});
+    return t("pdf.mb", {size: tenths(bytes / (1024 * 1024))});
+  }
+
+  function summaryText(summary) {
+    if ("generations" in summary) {
+      return t("pdf.fan", {
+        generations: t("pdf.generations", {count: summary.generations}),
+        people: t("pdf.people", {count: summary.people}),
+      });
+    }
+    return t("pdf.pedigree", {
+      charts: t("pdf.charts", {count: summary.charts}),
+      indexPages: t("pdf.indexPages", {count: summary.indexPages}),
+      pages: t("pdf.pages", {count: summary.pages}),
+    });
   }
 
   function showPdf(reply) {
@@ -275,8 +423,9 @@
     byId("download-pdf").href = pdfUrl;
     byId("download-pdf").download = reply.filename;
     byId("open-pdf").href = pdfUrl;
-    const fontNote = fonts === "base14" ? " · Built-in fonts used" : "";
-    byId("pdf-summary").textContent = `${reply.summary} · ${humanSize(blob.size)}${fontNote}`;
+    const usedFonts = fonts;
+    show(byId("pdf-summary"), () => [summaryText(reply.summary), humanSize(blob.size),
+      ...(usedFonts === "base14" ? [t("pdf.builtinFonts")] : [])].join(" · "));
     byId("pdf-section").hidden = false;
     updatePreview();
   }
@@ -327,11 +476,11 @@
     resultRows = [];
     setActiveRoot(-1);
     byId("results").replaceChildren();
-    byId("result-summary").textContent = "";
+    show(byId("result-summary"), null);
   }
 
   function updateRootAction() {
-    byId("root-action").setAttribute("aria-label", root ? "Clear selected person" : "Open person list");
+    byId("root-action").setAttribute("aria-label", t(root ? "root.clear" : "root.openList"));
     byId("root-clear-icon").toggleAttribute("hidden", !root);
     byId("root-list-icon").toggleAttribute("hidden", Boolean(root));
   }
@@ -358,7 +507,8 @@
     invalidateRootMetadata();
     const queryChanged = byId("search").value !== root[1];
     byId("search").value = root[1];
-    byId("root-summary").textContent = `Root: ${root[0]}, ${root[1]}`;
+    const [id, name] = root;
+    show(byId("root-summary"), () => t("root.selected", {id, name}));
     updateRootAction();
     setRootChoicesOpen(false);
     if (queryChanged) {
@@ -379,7 +529,7 @@
     // Keep queued file opens, but a newer clear supersedes their root intent.
     for (const choice of openingFiles) choice.rootId = null;
     byId("search").value = "";
-    byId("root-summary").textContent = "Choose a root person.";
+    show(byId("root-summary"), () => t("root.choose"));
     setRootChoicesOpen(false);
     invalidateRootQuery();
     updateRootAction();
@@ -397,9 +547,10 @@
     resultRows = rows;
     resultsCurrent = true;
     searchInFlightSeq = null;
-    byId("result-summary").textContent = reply.total > rows.length
-      ? `${rows.length} of ${reply.total} shown`
-      : `${reply.total} ${reply.total === 1 ? "match" : "matches"}`;
+    const {total} = reply;
+    show(byId("result-summary"), () => total > rows.length
+      ? t("root.shown", {shown: rows.length, total})
+      : t("root.matches", {count: total}));
     for (const [position, row] of rows.entries()) {
       const item = document.createElement("li");
       item.setAttribute("role", "presentation");
@@ -463,7 +614,7 @@
     resultRows = [];
     setActiveRoot(-1);
     byId("results").replaceChildren();
-    byId("result-summary").textContent = "Searching…";
+    show(byId("result-summary"), () => t("root.searching"));
     // Only the successfully opened file owns automatic sample selection. This
     // survives option/search refreshes without leaking to a replacement file.
     const rootId = !root ? currentTreeChoice?.rootId : null;
@@ -497,7 +648,8 @@
       sendOpen(choice, bytes);
     } catch (error) {
       if (choice.id === fileChoice) {
-        showError(byId("open-error"), `Unable to read ${choice.name}: ${error.message || error}`);
+        const message = error.message || String(error);
+        showError(byId("open-error"), () => t("error.read", {name: choice.name, error: message}));
       }
     }
   }
@@ -512,6 +664,7 @@
   function optionChanged(control) {
     if (!belongsToChart(control, selectedChart())) return;
     if (control.id === "root-family") rootFamily = control.value;
+    if (control.id === "chart-lang") updateChartPlaceholders();
     if (["large-print", "adoptive-parents", "exclude-private", "preserve-case"].includes(control.id)) {
       invalidateRootMetadata();
       ensureRootMetadata();
@@ -526,12 +679,24 @@
     }
   }
 
-  function initFailed(step, host, message) {
-    const hint = step === "Installing Kincade" && host === "this site" && message.startsWith("Download failed:")
-      ? " Reload the page. If the download still fails, report this URL to the site owner."
-      : "";
+  const hostNames = {
+    jsdelivr: () => "jsDelivr",
+    pypi: () => "PyPI (reportlab), jsDelivr (Pillow, charset-normalizer)",
+    site: () => t("host.site"),
+    browser: () => t("host.browser"),
+    none: () => "—",
+  };
+
+  function initFailed(reply) {
     byId("status").classList.remove("visually-hidden");
-    byId("status").textContent = `${step} failed (${host}): ${message}${hint}`;
+    show(byId("status"), () => {
+      const text = t("init.failed", {
+        step: t(`step.${reply.step}`), host: hostNames[reply.host](), message: errorText(reply),
+      });
+      return reply.step === "kincade" && reply.host === "site" && reply.code === "download"
+        ? `${text} ${t("init.downloadHint")}`
+        : text;
+    });
     byId("retry").hidden = false;
   }
 
@@ -539,14 +704,15 @@
     switch (reply.type) {
       case "status":
         byId("status").classList.remove("visually-hidden");
-        byId("status").textContent = reply.text;
+        show(byId("status"), () => t(`step.${reply.step}`));
         break;
-      case "ready":
+      case "ready": {
         ready = true;
         fonts = reply.fonts;
-        byId("status").textContent = "Ready";
+        show(byId("status"), () => t("status.ready"));
         byId("status").classList.add("visually-hidden");
-        byId("version").textContent = `Version ${reply.kincade || manifest.kincade}`;
+        const version = reply.kincade || manifest.kincade;
+        show(byId("version"), () => t("page.version", {version}));
         updateDisabled();
         if (heldFile) {
           const choice = heldFile;
@@ -554,8 +720,9 @@
           void readChoice(choice);
         }
         break;
+      }
       case "failed":
-        initFailed(reply.step, reply.host, reply.message);
+        initFailed(reply);
         break;
       case "opened": {
         const choice = openingFiles.shift();
@@ -563,7 +730,7 @@
         hasTree = true;
         currentTreeChoice = choice;
         byId("sample").hidden = choice.source === "sample";
-        byId("file-summary").textContent = `${choice.name}: ${reply.count} people`;
+        show(byId("file-summary"), () => t("tree.summary", {name: choice.name, count: reply.count}));
         root = null;
         rootFamily = "";
         treeVersion += 1;
@@ -572,8 +739,8 @@
         setRootChoicesOpen(false);
         byId("search").value = "";
         byId("results").replaceChildren();
-        byId("result-summary").textContent = "";
-        byId("root-summary").textContent = "Choose a root person.";
+        show(byId("result-summary"), null);
+        show(byId("root-summary"), () => t("root.choose"));
         clearPdf();
         clearError(byId("open-error"));
         clearError(byId("request-error"));
@@ -611,7 +778,7 @@
         if (reply.request === "open") {
           openingFiles.shift();
           openOutstanding -= 1;
-          showError(byId("open-error"), reply.message, reply.details);
+          showError(byId("open-error"), () => errorText(reply), reply.details);
           if (!openOutstanding) {
             if (!root && currentTreeChoice?.rootId && !pendingSearch) {
               scheduleSearch(true);
@@ -623,16 +790,18 @@
         } else if (reply.request === "search") {
           if (reply.seq === searchSeq) {
             searchInFlightSeq = null;
-            byId("result-summary").textContent = "Search unavailable.";
-            showError(byId("request-error"), reply.message, reply.details);
+            show(byId("result-summary"), () => t("root.unavailable"));
+            showError(byId("request-error"), () => errorText(reply), reply.details);
           }
         } else if (reply.request === "root-metadata") {
           if (root && reply.seq === pendingMetadata?.seq) {
-            showError(byId("request-error"), reply.message, reply.details);
+            showError(byId("request-error"), () => errorText(reply), reply.details);
           }
         } else if (reply.request === "render") {
           renderInFlight = false;
-          if (root && reply.seq === renderSeq) showError(byId("request-error"), reply.message, reply.details);
+          if (root && reply.seq === renderSeq) {
+            showError(byId("request-error"), () => errorText(reply), reply.details);
+          }
           maybeRender();
           updateRendering();
         }
@@ -792,15 +961,29 @@
     // A cached page keeps its PDF available when the reader returns with Back.
     if (!event.persisted && pdfUrl) URL.revokeObjectURL(pdfUrl);
   });
-  byId("footer").placeholder = `Created ${new Date().toLocaleDateString("en-US", {
-    year: "numeric", month: "long", day: "numeric",
-  })} using Kincade`;
   showChart();
   updateDisabled();
-  let manifest;
+  let manifestError = null;
   try {
     manifest = JSON.parse(byId("manifest").textContent);
-    byId("version").textContent = `Version ${manifest.kincade}`;
+  } catch (error) {
+    manifestError = error;
+  }
+  if (manifest) {
+    fillLanguageChoices();
+    applyLanguage(preferredLanguage());
+  }
+  byId("page-lang").addEventListener("change", () => {
+    applyLanguage(byId("page-lang").value);
+    // The address keeps the choice, so a reload or a shared link opens in it.
+    const url = new URL(location.href);
+    url.searchParams.set("lang", pageLang);
+    history.replaceState(history.state, "", url);
+  });
+  try {
+    if (manifestError) throw manifestError;
+    const version = manifest.kincade;
+    show(byId("version"), () => t("page.version", {version}));
     const workerUrl = URL.createObjectURL(new Blob([byId("worker").textContent], {type: "text/javascript"}));
     try {
       worker = new Worker(workerUrl, {type: "module"});
@@ -808,7 +991,7 @@
       URL.revokeObjectURL(workerUrl);
     }
     worker.addEventListener("message", receive);
-    worker.addEventListener("error", (event) => initFailed("Starting Kincade", "browser", event.message));
+    worker.addEventListener("error", (event) => initFailed({step: "start", host: "browser", message: event.message}));
     // Static hosts can serve /kincade without redirecting to /kincade/.
     // Resolve assets from that directory, also supporting / and /index.html.
     const directoryPath = location.pathname.endsWith("/index.html")
@@ -820,6 +1003,6 @@
       wheelUrl: new URL(manifest.wheel.name, siteDirectory).href,
     });
   } catch (error) {
-    initFailed("Starting Kincade", "browser", error.message || String(error));
+    initFailed({step: "start", host: "browser", message: error.message || String(error)});
   }
 })();

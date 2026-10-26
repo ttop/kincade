@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1
 
 - Pedigree boxes have equal gaps to the facing boxes above and below, with uniform
   spacing in the rightmost column, in normal and large print.
